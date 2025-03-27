@@ -691,35 +691,37 @@
         const chapterIndex = novel.chapters.findIndex(ch => ch.id === chapterId);
         const beatIndex = chapter.sceneBeats.findIndex(b => b.id === beatId);
 
-        // 1. Previous chapter summaries
-        let previousSummaries = "";
+        // Build story so far section
+        let storySoFar = '';
+        
+        // Add previous chapters' summaries
         for (let i = 0; i < chapterIndex; i++) {
             if (novel.chapters[i].summary) {
-                previousSummaries += `Summary of Chapter ${i + 1}: ${novel.chapters[i].title || 'Untitled'}\n${novel.chapters[i].summary}\n\n`;
+                storySoFar += `Chapter ${i + 1}: ${novel.chapters[i].title || 'Untitled'}\n${novel.chapters[i].summary}\n\n`;
             }
         }
-
-        // 2. Current chapter text before the current beat
-        let previousBeatsText = "";
+        
+        // Add current chapter's previous beats
         for (let i = 0; i < beatIndex; i++) {
-            previousBeatsText += chapter.sceneBeats[i].text + "\n\n";
+            storySoFar += chapter.sceneBeats[i].text + "\n\n";
         }
 
-         // 3. Current beat text
-        const currentBeatText = beat.text;
-
-        // Construct the prompt
-        let prompt = "Here is the previous content of the novel,\n\n";
-        if (previousSummaries) {
-            prompt += previousSummaries;
-        }
-         if (previousBeatsText) {
-             prompt += `Content from the current chapter (${chapter.title || 'Untitled'}) so far:\n${previousBeatsText}\n`;
-         } else {
-             prompt += `This is the beginning of the chapter (${chapter.title || 'Untitled'}).\n`
-         }
-
-        prompt += `\nPlease continue this chapter. Here is what happens next. Rewrite it in the style of the novel.\n\n${currentBeatText}`;
+        // Construct the prompt using the template
+        let prompt = 'The story so far:\n<storySoFar>\n';
+        prompt += storySoFar;
+        prompt += '</storySoFar>\n\n';
+        prompt += 'You are an expert fiction writer. Continue the story and write about 400 words for the following instructions:\n';
+        prompt += '<instructions>\n';
+        prompt += beat.text;
+        prompt += '\n</instructions>\n\n';
+        prompt += 'NEVER conclude the scene on your own, follow the beat instructions very closely. NEVER end with foreshadowing. NEVER write further than what I prompt you with. AVOID imagining possible endings, NEVER deviate from the instructions.\n\n';
+        prompt += 'STOP EARLY if the continuation contains what was required in the instructions. You do not need to fill out the full amount of words possible.\n\n';
+        prompt += '- Do not use bold or italic font.\n';
+        prompt += '- Do not use expressions like "mechanical precision," "with rapid efficiency," or "at a steady pace", "her stride controlled, efficient", "this is not ideal".\n';
+        prompt += '- CT32F, from whose perspective the story is told, cannot feel or detect emotions in others. She cannot feel pain. She cannot assess things like beauty, nor does she feel the wind or cold.\n';
+        prompt += '- Do not measure parameters of the environment or mention these numbers.\n';
+        prompt += '- Write in active voice. Use British, American, Scientific, International, and Commercial English (Basic English) for everything except dialogues. For dialogues, use the language that ordinary people in the 1980x would use.\n';
+        prompt += '- Use sarcasm and dry humor. Make sarcastic jokes in the internal monologue.';
 
         copyToClipboard(prompt.trim(), buttonElement);
     }
