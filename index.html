@@ -397,6 +397,13 @@
           <button onclick="exportNovel(this)">Export Novel</button>
           <span class="feedback">Copied!</span>
         </div>
+        <div class="chapter-filter">
+          <label for="chapterFilter">Show chapter: </label>
+          <select id="chapterFilter" onchange="filterChapters(this.value)">
+            <option value="all">All Chapters</option>
+            <!-- Chapter options will be injected here -->
+          </select>
+        </div>
         <button class="delete-btn" onclick="deleteCurrentNovel()">
           Delete This Novel
         </button>
@@ -758,6 +765,61 @@ STOP EARLY if the continuation contains what was required in the instructions. Y
         });
       }
 
+      // --- Render chapter filter dropdown ---
+      function updateChapterFilter() {
+        if (!currentNovelId) return;
+        
+        const novel = getNovelById(currentNovelId);
+        if (!novel) return;
+        
+        const filterSelect = document.getElementById('chapterFilter');
+        if (!filterSelect) return;
+        
+        // Save current selection if any
+        const currentValue = filterSelect.value;
+        
+        // Clear existing options except for "All Chapters"
+        while (filterSelect.options.length > 1) {
+          filterSelect.remove(1);
+        }
+        
+        // Add option for each chapter
+        novel.chapters.forEach((chapter, index) => {
+          const option = document.createElement('option');
+          option.value = chapter.id;
+          option.textContent = chapter.title || `Chapter ${index + 1}`;
+          filterSelect.appendChild(option);
+        });
+        
+        // Restore selection if possible
+        if (currentValue && [...filterSelect.options].some(opt => opt.value === currentValue)) {
+          filterSelect.value = currentValue;
+        } else {
+          filterSelect.value = 'all'; // Default to All Chapters
+        }
+        
+        // Apply current filter
+        filterChapters(filterSelect.value);
+      }
+      
+      // --- Filter chapters based on selection ---
+      function filterChapters(chapterId) {
+        const chaptersContainer = document.getElementById('chaptersContainer');
+        const chapterElements = chaptersContainer.querySelectorAll('.chapter');
+        
+        if (chapterId === 'all') {
+          // Show all chapters
+          chapterElements.forEach(el => {
+            el.style.display = 'block';
+          });
+        } else {
+          // Show only the selected chapter
+          chapterElements.forEach(el => {
+            el.style.display = el.dataset.chapterId === chapterId ? 'block' : 'none';
+          });
+        }
+      }
+
       // --- UI Navigation ---
 
       function showView(viewId) {
@@ -788,6 +850,7 @@ STOP EARLY if the continuation contains what was required in the instructions. Y
         if (!currentNovelId) return;
         showView("novelEditorView");
         renderNovelEditor();
+        updateChapterFilter(); // Update the chapter filter dropdown
       }
 
       function showSettings() {
@@ -900,6 +963,7 @@ STOP EARLY if the continuation contains what was required in the instructions. Y
         novel.chapters.push(newChapter);
         saveNovels();
         renderNovelEditor();
+        updateChapterFilter(); // Update filter after adding a chapter
       }
 
       function deleteChapter(novelId, chapterId) {
@@ -920,6 +984,7 @@ STOP EARLY if the continuation contains what was required in the instructions. Y
           removeChapterSummaryState(chapterId);
           saveNovels();
           renderNovelEditor(); // Re-render the editor view
+          updateChapterFilter(); // Update filter after deleting
         }
       }
 
@@ -929,21 +994,11 @@ STOP EARLY if the continuation contains what was required in the instructions. Y
         if (chapter) {
           chapter.title = newTitle.trim() || "Untitled Chapter";
           saveNovels();
-          // Update current novel title display if it hasn't been set properly
-          document.getElementById("currentNovelTitle").textContent =
-            novel.title || "Untitled Novel";
+          updateChapterFilter(); // Update filter when title changes
         }
       }
 
-      function updateChapterSummary(novelId, chapterId, summaryText) {
-        const novel = getNovelById(novelId);
-        const chapter = getChapterById(novel, chapterId);
-        if (chapter) {
-          chapter.summary = summaryText;
-          saveNovels();
-        }
-      }
-
+      // --- Update moveChapter to refresh the filter ---
       function moveChapter(novelId, chapterIndex, direction) {
         // direction: -1 for up, 1 for down
         const novel = getNovelById(novelId);
@@ -962,6 +1017,7 @@ STOP EARLY if the continuation contains what was required in the instructions. Y
 
         saveNovels();
         renderNovelEditor(); // Re-render to reflect new order
+        updateChapterFilter(); // Update filter after moving chapters
       }
 
       // --- Scene Beat Actions ---
@@ -999,6 +1055,9 @@ STOP EARLY if the continuation contains what was required in the instructions. Y
         );
         renderSceneBeats(novelId, chapterId, beatsContainer);
         newBeatTextArea.focus(); // Focus input for quick next entry
+
+        // Ensure summaries are properly initialized after adding content
+        initializeCollapsibleSummaries();
       }
 
       function deleteSceneBeat(novelId, chapterId, beatId) {
@@ -1492,6 +1551,7 @@ STOP EARLY if the continuation contains what was required in the instructions. Y
         novel.chapters.push(newChapter);
         saveNovels();
         renderNovelEditor();
+        updateChapterFilter(); // Update filter after adding a chapter
       }
 
       function addSceneBeat(novelId, chapterId) {
