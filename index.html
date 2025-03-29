@@ -386,7 +386,13 @@
       <!-- Novel Editor View -->
       <div id="novelEditorView" style="display: none">
         <button onclick="showNovelList()">← Back to Novel List</button>
-        <h2 id="currentNovelTitle"></h2>
+        <div class="novel-title-edit">
+          <input
+            type="text"
+            id="editNovelTitle"
+            oninput="updateNovelTitle(this.value)"
+          />
+        </div>
         <div class="import-export-area">
           <button onclick="exportNovel(this)">Export Novel</button>
           <span class="feedback">Copied!</span>
@@ -579,6 +585,14 @@ STOP EARLY if the continuation contains what was required in the instructions. Y
         });
       }
 
+      function updateNovelTitle(newTitle) {
+        const novel = getNovelById(currentNovelId);
+        if (novel) {
+          novel.title = newTitle.trim() || "Untitled Novel";
+          saveNovels();
+        }
+      }
+
       function renderNovelEditor() {
         const novel = getNovelById(currentNovelId);
         if (!novel) {
@@ -587,7 +601,7 @@ STOP EARLY if the continuation contains what was required in the instructions. Y
           return;
         }
 
-        document.getElementById("currentNovelTitle").textContent =
+        document.getElementById("editNovelTitle").value =
           novel.title || "Untitled Novel";
         const chaptersContainer = document.getElementById("chaptersContainer");
         chaptersContainer.innerHTML = ""; // Clear existing chapters
