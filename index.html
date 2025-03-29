@@ -999,15 +999,8 @@ STOP EARLY if the continuation contains what was required in the instructions. Y
         if (!chapter) return;
 
         // Collect only the generated text for summary, assuming that's what should be summarized.
-        // If you want to summarize the beat *instructions*, use beat.text instead.
-        // let chapterText = chapter.sceneBeats.map(beat => beat.generatedText || beat.text).filter(Boolean).join('\n\n');
-        // Let's stick to summarizing the *instructions* (beat.text) as before
-        let chapterText = chapter.sceneBeats.map(beat => beat.text).filter(Boolean).join('\n\n');
-
-
-        // You might want to make this prompt configurable too, but let's keep it simple for now
+         let chapterText = chapter.sceneBeats.map(beat => beat.generatedText || beat.text).filter(Boolean).join('\n\n');
         const prompt = `Please write a concise summary of the following chapter content:\n\n${chapterText}`;
-
         copyToClipboard(prompt, buttonElement);
     }
 
