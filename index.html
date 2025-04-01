@@ -163,7 +163,16 @@
         min-height: 40px;
       }
 
-      .generated-text-area,
+      .generated-text-area-display {
+        /* Renamed for clarity */
+        padding: 8px;
+        background-color: #e8f0fe; /* Light blue background */
+        border-radius: 4px;
+        min-height: 80px;
+        white-space: pre-wrap; /* Preserve whitespace */
+        border: 1px solid #d0d8e8; /* Add subtle border */
+      }
+
       .summary-text-area {
         min-height: 80px;
         background-color: #e8f0fe; /* Light blue background */
@@ -314,6 +323,7 @@
       }
 
       .prompt-textarea {
+        /* Used by multiple modals now */
         width: 100%;
         min-height: 300px;
         font-family: monospace;
@@ -397,7 +407,7 @@
       const { useState, useEffect, useCallback, useMemo } = React;
 
       // --- Constants ---
-      const LS_KEY = "novels_react"; // Use a different key for React version
+      const LS_KEY = "novels_react";
       const LS_SUMMARY_STATE_KEY = "chapterSummaryStates_react";
       const DEFAULT_PROMPT_TEMPLATE = `The story so far:
 {storySoFar}
@@ -423,24 +433,42 @@ STOP EARLY if the continuation contains what was required in the instructions. Y
         );
       }
 
-      // ****** FIXED HERE ******
       function getEffectiveTemplate(novel) {
-        // Replace novel?.template with (novel && novel.template)
         return (novel && novel.template) || DEFAULT_PROMPT_TEMPLATE;
       }
-      // ****** END FIX ******
 
-      // Simple copy-to-clipboard helper
       function copyToClipboard(text) {
         if (!text) return Promise.reject(new Error("Nothing to copy"));
         return navigator.clipboard.writeText(text);
       }
 
+      function findChapeter(novel, chapterId) {
+        if (!novel || !novel.chapters) return null;
+        return novel.chapters.find((chapter) => chapter.id === chapterId);
+      }
+
       // --- Modal Component ---
       function Modal({ title, children, footer, onClose }) {
+        // Handle Escape key press
+        useEffect(() => {
+          const handleKeyDown = (event) => {
+            if (event.key === "Escape") {
+              onClose();
+            }
+          };
+          document.addEventListener("keydown", handleKeyDown);
+          return () => {
+            document.removeEventListener("keydown", handleKeyDown);
+          };
+        }, [onClose]); // Re-add listener if onClose changes
+
         return (
-          <div className="modal-overlay">
-            <div className="modal-dialog">
+          <div className="modal-overlay" onClick={onClose}>
+            {" "}
+            {/* Close on overlay click */}
+            <div className="modal-dialog" onClick={(e) => e.stopPropagation()}>
+              {" "}
+              {/* Prevent closing when clicking inside dialog */}
               <div className="modal-header">
                 <h3 className="modal-title">{title}</h3>
                 <button className="modal-close" onClick={onClose}>
@@ -468,12 +496,13 @@ STOP EARLY if the continuation contains what was required in the instructions. Y
         beat,
         beatIndex,
         totalBeats,
-        onUpdateBeatText,
-        onUpdateGeneratedText,
+        // onUpdateBeatText, // Replaced by onEditBeat trigger
+        onUpdateGeneratedText, // Still needed for clear
         onDeleteBeat,
         onMoveBeat,
         onShowPrompt,
         onEditBeat,
+        onShowEditGeneratedTextModal, // **** NEW PROP ****
       }) {
         return (
           <div className="scene-beat">
@@ -482,6 +511,7 @@ STOP EARLY if the continuation contains what was required in the instructions. Y
             >
               <strong>Scene Beat Instruction:</strong>
             </p>
+            {/* Display beat text as static paragraph */}
             <p
               className="beat-text-area"
               style={{
@@ -489,6 +519,7 @@ STOP EARLY if the continuation contains what was required in the instructions. Y
                 backgroundColor: "#f5f5f5",
                 borderRadius: "4px",
                 minHeight: "60px",
+                whiteSpace: "pre-wrap",
               }}
             >
               {beat.text || ""}
@@ -510,7 +541,7 @@ STOP EARLY if the continuation contains what was required in the instructions. Y
                 ↓
               </button>
               <button onClick={() => onEditBeat(novelId, chapterId, beat.id)}>
-                Edit
+                Edit Instruction
               </button>
               <button onClick={() => onShowPrompt(novelId, chapterId, beat.id)}>
                 Show Prompt
@@ -533,19 +564,36 @@ STOP EARLY if the continuation contains what was required in the instructions. Y
             >
               <strong>AI Generated Content:</strong>
             </p>
-            <textarea
-              className="generated-text-area"
-              placeholder="Paste AI generated content here..."
-              value={beat.generatedText || ""}
-              onChange={(e) =>
-                onUpdateGeneratedText(
-                  novelId,
-                  chapterId,
-                  beat.id,
-                  e.target.value
-                )
-              }
-            />
+            {/* Display generated text */}
+            <div
+              className="generated-text-area-display" // Use display class
+            >
+              {beat.generatedText || "No generated content yet."}
+            </div>
+            <div style={{ textAlign: "right", marginTop: "5px" }}>
+              {/* Clear button still uses onUpdateGeneratedText */}
+              <button
+                onClick={() =>
+                  onUpdateGeneratedText(novelId, chapterId, beat.id, "")
+                }
+              >
+                Clear
+              </button>
+              {/* **** NEW EDIT BUTTON **** */}
+              <button
+                onClick={() =>
+                  onShowEditGeneratedTextModal(
+                    novelId,
+                    chapterId,
+                    beat.id,
+                    beat.generatedText
+                  )
+                }
+                style={{ marginLeft: "5px" }}
+              >
+                Edit Content
+              </button>
+            </div>
           </div>
         );
       }
@@ -612,7 +660,7 @@ STOP EARLY if the continuation contains what was required in the instructions. Y
         onDeleteChapter,
         onMoveChapter,
         onAddBeat,
-        onUpdateBeatText,
+        // onUpdateBeatText, // Removed - handled by modal now
         onUpdateGeneratedText,
         onDeleteBeat,
         onMoveBeat,
@@ -622,6 +670,7 @@ STOP EARLY if the continuation contains what was required in the instructions. Y
         onUpdateChapterSummary,
         onCopySummaryPrompt,
         onEditBeat,
+        onShowEditGeneratedTextModal, // **** NEW PROP ****
       }) {
         const [newBeatText, setNewBeatText] = useState("");
 
@@ -684,12 +733,13 @@ STOP EARLY if the continuation contains what was required in the instructions. Y
                     beat={beat}
                     beatIndex={index}
                     totalBeats={chapter.sceneBeats.length}
-                    onUpdateBeatText={onUpdateBeatText}
+                    // onUpdateBeatText removed
                     onUpdateGeneratedText={onUpdateGeneratedText}
                     onDeleteBeat={onDeleteBeat}
                     onMoveBeat={onMoveBeat}
                     onShowPrompt={onShowPrompt}
                     onEditBeat={onEditBeat}
+                    onShowEditGeneratedTextModal={onShowEditGeneratedTextModal} // **** PASS DOWN ****
                   />
                 ))
               )}
@@ -734,8 +784,8 @@ STOP EARLY if the continuation contains what was required in the instructions. Y
         onAddBeat,
         onDeleteBeat,
         onMoveBeat,
-        onUpdateBeatText,
-        onUpdateGeneratedText,
+        onUpdateBeatText, // Still needed for saving edit beat modal
+        onUpdateGeneratedText, // Needed for clear & saving edit gen text modal
         // Summary Actions
         onUpdateChapterSummary,
         // Other
@@ -746,6 +796,7 @@ STOP EARLY if the continuation contains what was required in the instructions. Y
         onToggleSummaryCollapse,
         onCopySummaryPrompt,
         onEditBeat,
+        onShowEditGeneratedTextModal, // **** NEW PROP ****
       }) {
         const [exportFeedback, setExportFeedback] = useState(false);
         const [chapterFilter, setChapterFilter] = useState("all");
@@ -825,7 +876,6 @@ STOP EARLY if the continuation contains what was required in the instructions. Y
                 )}
               {filteredChapters.length > 0
                 ? filteredChapters.map((chapter) => {
-                    // Find the original index for move button disabling
                     const originalIndex = novel.chapters.findIndex(
                       (ch) => ch.id === chapter.id
                     );
@@ -834,14 +884,14 @@ STOP EARLY if the continuation contains what was required in the instructions. Y
                         key={chapter.id}
                         novelId={novel.id}
                         chapter={chapter}
-                        chapterIndex={originalIndex} // Use original index for move logic
+                        chapterIndex={originalIndex}
                         totalChapters={novel.chapters.length}
                         onUpdateChapterTitle={onUpdateChapterTitle}
                         onDeleteChapter={onDeleteChapter}
                         onMoveChapter={onMoveChapter}
                         onAddBeat={onAddBeat}
-                        onUpdateBeatText={onUpdateBeatText}
-                        onUpdateGeneratedText={onUpdateGeneratedText}
+                        // onUpdateBeatText removed
+                        onUpdateGeneratedText={onUpdateGeneratedText} // Pass down for clear button
                         onDeleteBeat={onDeleteBeat}
                         onMoveBeat={onMoveBeat}
                         onShowPrompt={onShowPrompt}
@@ -850,12 +900,15 @@ STOP EARLY if the continuation contains what was required in the instructions. Y
                             "undefined" &&
                           summaryCollapseStates[chapter.id] !== null
                             ? summaryCollapseStates[chapter.id]
-                            : true // Default collapsed
+                            : true
                         }
                         onToggleSummaryCollapse={onToggleSummaryCollapse}
                         onUpdateChapterSummary={onUpdateChapterSummary}
                         onCopySummaryPrompt={onCopySummaryPrompt}
                         onEditBeat={onEditBeat}
+                        onShowEditGeneratedTextModal={
+                          onShowEditGeneratedTextModal
+                        } // **** PASS DOWN ****
                       />
                     );
                   })
@@ -907,7 +960,6 @@ STOP EARLY if the continuation contains what was required in the instructions. Y
         };
 
         const sortedNovels = useMemo(() => {
-          // Ensure novels is always an array before sorting
           const novelsArray = Array.isArray(novels) ? novels : [];
           return [...novelsArray].sort((a, b) =>
             (a.title || "").localeCompare(b.title || "")
@@ -981,7 +1033,8 @@ STOP EARLY if the continuation contains what was required in the instructions. Y
         const [novels, setNovels] = useState([]);
         const [currentView, setCurrentView] = useState("list"); // 'list' or 'editor'
         const [currentNovelId, setCurrentNovelId] = useState(null);
-        const [modalContent, setModalContent] = useState(null); // { type: 'prompt'/'template', data: ... }
+        // **** Modal content now holds type AND data ****
+        const [modalContent, setModalContent] = useState(null); // { type: 'prompt'|'template'|'export'|'editBeat'|'editGeneratedText', data: ... }
         const [summaryCollapseStates, setSummaryCollapseStates] = useState({});
 
         // --- Load initial data ---
@@ -992,31 +1045,33 @@ STOP EARLY if the continuation contains what was required in the instructions. Y
           if (storedNovels) {
             try {
               loadedNovels = JSON.parse(storedNovels);
-              // Ensure loadedNovels is an array
               if (!Array.isArray(loadedNovels)) {
                 console.warn("Loaded novels data is not an array, resetting.");
                 loadedNovels = [];
               }
-              // Basic validation/migration
+              // Basic validation/migration (ensure arrays/fields exist)
               loadedNovels.forEach((novel) => {
-                // Check if novel is an object
-                if (typeof novel !== "object" || novel === null) return;
-
+                if (typeof novel !== "object" || novel === null) return; // Skip invalid entries
+                novel.id = novel.id || generateId();
+                novel.title = novel.title || "Untitled Novel";
                 novel.template =
-                  novel.template === undefined ? null : novel.template; // Add template field if missing
+                  novel.template === undefined ? null : novel.template;
                 novel.chapters = Array.isArray(novel.chapters)
                   ? novel.chapters
                   : [];
                 novel.chapters.forEach((chapter) => {
                   if (typeof chapter !== "object" || chapter === null) return;
+                  chapter.id = chapter.id || generateId();
+                  chapter.title = chapter.title || "Untitled Chapter";
+                  chapter.summary = chapter.summary || "";
                   chapter.sceneBeats = Array.isArray(chapter.sceneBeats)
                     ? chapter.sceneBeats
                     : [];
-                  chapter.summary = chapter.summary || "";
                   chapter.sceneBeats.forEach((beat) => {
                     if (typeof beat !== "object" || beat === null) return;
+                    beat.id = beat.id || generateId();
+                    beat.text = beat.text || "";
                     beat.generatedText = beat.generatedText || "";
-                    beat.text = beat.text || ""; // Ensure text field exists
                   });
                 });
               });
@@ -1040,11 +1095,10 @@ STOP EARLY if the continuation contains what was required in the instructions. Y
             console.error("Error parsing summary states:", e);
             setSummaryCollapseStates({});
           }
-        }, []); // Empty dependency array means run only once on mount
+        }, []);
 
         // --- Save data to local storage on change ---
         useEffect(() => {
-          // Only save if novels is actually an array
           if (Array.isArray(novels)) {
             try {
               localStorage.setItem(LS_KEY, JSON.stringify(novels));
@@ -1053,7 +1107,7 @@ STOP EARLY if the continuation contains what was required in the instructions. Y
               alert("Error saving novel data. Local storage might be full.");
             }
           }
-        }, [novels]); // Run whenever novels state changes
+        }, [novels]);
 
         useEffect(() => {
           try {
@@ -1063,20 +1117,18 @@ STOP EARLY if the continuation contains what was required in the instructions. Y
             );
           } catch (e) {
             console.error("Error saving summary states:", e);
-            // Don't alert for this, less critical
           }
-        }, [summaryCollapseStates]); // Run whenever collapse states change
+        }, [summaryCollapseStates]);
 
-        // --- State Update Helper (Immutability!) ---
+        // --- State Update Helper ---
         const updateNovels = (updateFn) => {
           setNovels((prevNovels) => {
-            // Ensure prevNovels is an array before applying the update function
             const currentNovels = Array.isArray(prevNovels) ? prevNovels : [];
             return updateFn(currentNovels);
           });
         };
 
-        // --- Novel Actions ---
+        // --- Novel Actions (Existing - unchanged) ---
         const handleCreateNovel = (title) => {
           const newNovel = {
             id: generateId(),
@@ -1085,15 +1137,13 @@ STOP EARLY if the continuation contains what was required in the instructions. Y
             chapters: [],
           };
           updateNovels((prev) => [...prev, newNovel]);
-          setCurrentNovelId(newNovel.id); // Open the new novel
+          setCurrentNovelId(newNovel.id);
           setCurrentView("editor");
         };
-
         const handleOpenNovel = (id) => {
           setCurrentNovelId(id);
           setCurrentView("editor");
         };
-
         const handleDeleteNovel = (id) => {
           const novelToDelete = novels.find((n) => n.id === id);
           if (!novelToDelete) return;
@@ -1109,10 +1159,8 @@ STOP EARLY if the continuation contains what was required in the instructions. Y
               setCurrentView("list");
               setCurrentNovelId(null);
             }
-            // Clean up summary states for deleted novel's chapters (optional but good practice)
             setSummaryCollapseStates((prevStates) => {
               const newStates = { ...prevStates };
-              // Check if chapters exist before iterating
               if (Array.isArray(novelToDelete.chapters)) {
                 novelToDelete.chapters.forEach((ch) => delete newStates[ch.id]);
               }
@@ -1120,7 +1168,6 @@ STOP EARLY if the continuation contains what was required in the instructions. Y
             });
           }
         };
-
         const handleUpdateNovel = (id, updates) => {
           updateNovels((prev) =>
             prev.map((novel) =>
@@ -1128,48 +1175,36 @@ STOP EARLY if the continuation contains what was required in the instructions. Y
             )
           );
         };
-
         const handleBackToList = () => {
           setCurrentView("list");
           setCurrentNovelId(null);
         };
 
-        // --- Chapter Actions ---
+        // --- Chapter Actions (Existing - unchanged) ---
         const handleAddChapter = (novelId) => {
           const newChapter = {
             id: generateId(),
-            title: "", // Start untitled
+            title: "",
             sceneBeats: [],
             summary: "",
           };
           updateNovels((prev) =>
             prev.map((novel) => {
               if (novel.id === novelId) {
-                // Ensure chapters is an array before accessing length
                 const currentChapters = Array.isArray(novel.chapters)
                   ? novel.chapters
                   : [];
-                // Assign default title based on new position
                 newChapter.title = `Chapter ${currentChapters.length + 1}`;
                 return { ...novel, chapters: [...currentChapters, newChapter] };
               }
               return novel;
             })
           );
-          // Optionally scroll to new chapter - requires DOM refs, more complex in React
         };
-
         const handleDeleteChapter = (novelId, chapterId) => {
           const novel = novels.find((n) => n.id === novelId);
-          // ****** FIXED HERE ******
-          // Replace novel?.chapters with novel && novel.chapters
-          const chapter =
-            novel &&
-            Array.isArray(novel.chapters) &&
-            novel.chapters.find((c) => c.id === chapterId);
-          // ****** END FIX ******
+          const chapter = findChapeter(novel, chapterId);
           if (!novel || !chapter) return;
-
           if (
             confirm(
               `Are you sure you want to delete "${
@@ -1180,7 +1215,6 @@ STOP EARLY if the continuation contains what was required in the instructions. Y
             updateNovels((prev) =>
               prev.map((n) => {
                 if (n.id === novelId) {
-                  // Ensure chapters is an array before filtering
                   const currentChapters = Array.isArray(n.chapters)
                     ? n.chapters
                     : [];
@@ -1194,7 +1228,6 @@ STOP EARLY if the continuation contains what was required in the instructions. Y
                 return n;
               })
             );
-            // Clean up summary state
             setSummaryCollapseStates((prevStates) => {
               const newStates = { ...prevStates };
               delete newStates[chapterId];
@@ -1202,7 +1235,6 @@ STOP EARLY if the continuation contains what was required in the instructions. Y
             });
           }
         };
-
         const handleUpdateChapterTitle = (novelId, chapterId, newTitle) => {
           updateNovels((prev) =>
             prev.map((n) => {
@@ -1223,7 +1255,6 @@ STOP EARLY if the continuation contains what was required in the instructions. Y
             })
           );
         };
-
         const handleMoveChapter = (novelId, chapterId, direction) => {
           updateNovels((prev) =>
             prev.map((n) => {
@@ -1231,20 +1262,16 @@ STOP EARLY if the continuation contains what was required in the instructions. Y
                 const currentChapters = Array.isArray(n.chapters)
                   ? n.chapters
                   : [];
-                const chapters = [...currentChapters]; // Create mutable copy
+                const chapters = [...currentChapters];
                 const index = chapters.findIndex((ch) => ch.id === chapterId);
-                if (index === -1) return n; // Should not happen
-
+                if (index === -1) return n;
                 const newIndex = index + direction;
-                if (newIndex < 0 || newIndex >= chapters.length) return n; // Invalid move
-
-                // Swap
+                if (newIndex < 0 || newIndex >= chapters.length) return n;
                 [chapters[index], chapters[newIndex]] = [
                   chapters[newIndex],
                   chapters[index],
                 ];
-
-                return { ...n, chapters: chapters };
+                return { ...n, chapters };
               }
               return n;
             })
@@ -1282,28 +1309,19 @@ STOP EARLY if the continuation contains what was required in the instructions. Y
           );
         };
 
-        // New Edit Beat function
+        // Trigger Edit Beat Modal
         const handleEditBeat = (novelId, chapterId, beatId) => {
           const novel = novels.find((n) => n.id === novelId);
-          if (!novel || !Array.isArray(novel.chapters)) return;
-
-          const chapter = novel.chapters.find((ch) => ch.id === chapterId);
-          if (!chapter || !Array.isArray(chapter.sceneBeats)) return;
-
+          const chapter = findChapeter(novel, chapterId);
           const beat = chapter.sceneBeats.find((b) => b.id === beatId);
           if (!beat) return;
-
           setModalContent({
             type: "editBeat",
-            data: {
-              novelId,
-              chapterId,
-              beatId,
-              text: beat.text || "",
-            },
+            data: { novelId, chapterId, beatId, text: beat.text || "" },
           });
         };
 
+        // Save Edited Beat Text (called from EditBeatModal)
         const handleSaveBeatEdit = (novelId, chapterId, beatId, newText) => {
           handleUpdateBeatText(novelId, chapterId, beatId, newText);
           handleCloseModal();
@@ -1341,6 +1359,7 @@ STOP EARLY if the continuation contains what was required in the instructions. Y
           }
         };
 
+        // Update Beat Instruction Text (used by save edit modal)
         const handleUpdateBeatText = (novelId, chapterId, beatId, newText) => {
           updateNovels((prev) =>
             prev.map((n) => {
@@ -1371,6 +1390,7 @@ STOP EARLY if the continuation contains what was required in the instructions. Y
           );
         };
 
+        // Update Generated Text (used by clear button & save edit modal)
         const handleUpdateGeneratedText = (
           novelId,
           chapterId,
@@ -1420,19 +1440,15 @@ STOP EARLY if the continuation contains what was required in the instructions. Y
                       const currentBeats = Array.isArray(ch.sceneBeats)
                         ? ch.sceneBeats
                         : [];
-                      const beats = [...currentBeats]; // Mutable copy
+                      const beats = [...currentBeats];
                       const index = beats.findIndex((b) => b.id === beatId);
                       if (index === -1) return ch;
-
                       const newIndex = index + direction;
                       if (newIndex < 0 || newIndex >= beats.length) return ch;
-
-                      // Swap
                       [beats[index], beats[newIndex]] = [
                         beats[newIndex],
                         beats[index],
                       ];
-
                       return { ...ch, sceneBeats: beats };
                     }
                     return ch;
@@ -1444,7 +1460,7 @@ STOP EARLY if the continuation contains what was required in the instructions. Y
           );
         };
 
-        // --- Summary Actions ---
+        // --- Summary Actions (Existing - unchanged) ---
         const handleUpdateChapterSummary = (
           novelId,
           chapterId,
@@ -1467,37 +1483,28 @@ STOP EARLY if the continuation contains what was required in the instructions. Y
             })
           );
         };
-
-        // ****** FIXED HERE ******
         const handleToggleSummaryCollapse = (chapterId) => {
           setSummaryCollapseStates((prevStates) => {
-            // Replace prevStates[chapterId] ?? true with compatible check
             const currentState =
               typeof prevStates[chapterId] !== "undefined" &&
               prevStates[chapterId] !== null
                 ? prevStates[chapterId]
-                : true; // Default to collapsed (true) if undefined/null
-            return {
-              ...prevStates,
-              [chapterId]: !currentState, // Toggle the determined state
-            };
+                : true; // Default collapsed
+            return { ...prevStates, [chapterId]: !currentState };
           });
         };
-        // ****** END FIX ******
 
-        // --- Prompt Generation ---
+        // --- Prompt Generation (Existing - unchanged) ---
         const generatePromptText = (novelId, chapterId, beatId) => {
           const novel = novels.find((n) => n.id === novelId);
           if (!novel || !Array.isArray(novel.chapters))
             return { error: "Novel or chapters not found/invalid" };
-
           const chapterIndex = novel.chapters.findIndex(
             (ch) => ch.id === chapterId
           );
           const chapter = novel.chapters[chapterIndex];
           if (!chapter || !Array.isArray(chapter.sceneBeats))
             return { error: "Chapter or scene beats not found/invalid" };
-
           const beatIndex = chapter.sceneBeats.findIndex(
             (b) => b.id === beatId
           );
@@ -1505,17 +1512,14 @@ STOP EARLY if the continuation contains what was required in the instructions. Y
           if (beatIndex === -1 || !beat)
             return { error: "Scene beat not found" };
 
-          // Build story so far
           let storySoFar = "";
           const maxContextLength = 10000;
 
           // Previous chapters context
           for (let i = 0; i < chapterIndex; i++) {
             const prevChapter = novel.chapters[i];
-            // Ensure prevChapter and its beats are valid before processing
             if (!prevChapter || !Array.isArray(prevChapter.sceneBeats))
               continue;
-
             let chapterContext = "";
             if (prevChapter.summary) {
               chapterContext = `Summary of Chapter ${i + 1}: ${
@@ -1537,25 +1541,20 @@ STOP EARLY if the continuation contains what was required in the instructions. Y
               maxContextLength * 1.2
             ) {
               storySoFar += chapterContext;
-            } else {
-              break;
-            }
+            } else break; // Stop adding chapters if context gets too long
           }
 
           // Previous beats in current chapter
           for (let i = 0; i < beatIndex; i++) {
             const prevBeat = chapter.sceneBeats[i];
             if (prevBeat && prevBeat.generatedText) {
-              // Check prevBeat exists
               const beatText = prevBeat.generatedText + "\n\n";
               if (
                 storySoFar.length + beatText.length <
                 maxContextLength * 1.2
               ) {
                 storySoFar += beatText;
-              } else {
-                break;
-              }
+              } else break; // Stop adding beats if context gets too long
             }
           }
 
@@ -1565,18 +1564,15 @@ STOP EARLY if the continuation contains what was required in the instructions. Y
             storySoFar =
               `... (trimmed ${excess} characters)\n` + storySoFar.slice(excess);
           }
-
           storySoFar = storySoFar.trim();
 
           const template = getEffectiveTemplate(novel);
           const instructionsText = beat.text || "";
-
           let prompt = template.replace(
             "{storySoFar}",
             storySoFar || "This is the beginning of the story."
           );
           prompt = prompt.replace("{instructions}", instructionsText);
-
           return { prompt: prompt.trim() };
         };
 
@@ -1593,7 +1589,6 @@ STOP EARLY if the continuation contains what was required in the instructions. Y
           }
           setModalContent({ type: "prompt", data: { text: prompt } });
         };
-
         const handleShowTemplateEditor = (novelId) => {
           const novel = novels.find((n) => n.id === novelId);
           if (!novel) return;
@@ -1605,11 +1600,25 @@ STOP EARLY if the continuation contains what was required in the instructions. Y
             },
           });
         };
-
         const handleShowExportModal = (exportText) => {
+          setModalContent({ type: "export", data: { text: exportText } });
+        };
+
+        // **** NEW: Trigger Edit Generated Text Modal ****
+        const handleShowEditGeneratedTextModal = (
+          novelId,
+          chapterId,
+          beatId,
+          generatedText
+        ) => {
           setModalContent({
-            type: "export",
-            data: { text: exportText },
+            type: "editGeneratedText",
+            data: {
+              novelId,
+              chapterId,
+              beatId,
+              generatedText: generatedText || "",
+            }, // Ensure text is not null/undefined
           });
         };
 
@@ -1623,68 +1632,61 @@ STOP EARLY if the continuation contains what was required in the instructions. Y
               ? newTemplate
               : null;
           handleUpdateNovel(novelId, { template: templateToSave });
-          // Optionally close modal or show feedback inside
-          // For simplicity, we'll just close it here
+          handleCloseModal();
+        };
+
+        // **** NEW: Save Edited Generated Text (called from EditGeneratedTextModal) ****
+        const handleSaveGeneratedText = (
+          novelId,
+          chapterId,
+          beatId,
+          newText
+        ) => {
+          handleUpdateGeneratedText(novelId, chapterId, beatId, newText);
           handleCloseModal();
         };
 
         // --- Copy Actions ---
         const handleCopyPromptFromModal = (text) => {
-          return copyToClipboard(text); // Returns a promise
+          return copyToClipboard(text);
         };
-
         const handleCopySummaryPrompt = (novelId, chapterId) => {
           const novel = novels.find((n) => n.id === novelId);
-          // ****** FIXED HERE ******
-          // Replace novel?.chapters with novel && novel.chapters
-          const chapter =
-            novel &&
-            Array.isArray(novel.chapters) &&
-            novel.chapters.find((c) => c.id === chapterId);
-          // ****** END FIX ******
+          const chapter = findChapeter(novel, chapterId);
           if (!chapter || !Array.isArray(chapter.sceneBeats))
             return Promise.reject(
               new Error("Chapter or scene beats not found/invalid")
             );
-
           const chapterText = chapter.sceneBeats
             .map((beat) => beat.generatedText || "")
             .filter(Boolean)
             .join("\n\n");
-
           if (!chapterText) {
             alert("No generated content in this chapter to summarize.");
             return Promise.reject(new Error("No content to summarize"));
           }
-
           const prompt = `Please write a concise summary of the following chapter content:\n\n${chapterText}`;
           return copyToClipboard(prompt);
         };
 
-        // --- Import / Export ---
+        // --- Import / Export (Existing - unchanged) ---
         const handleExportNovel = (novelId) => {
           return new Promise((resolve, reject) => {
             const novel = novels.find((n) => n.id === novelId);
             if (!novel) return reject(new Error("Novel not found"));
-
-            let markdown = `# ${novel.title || "Untitled Novel"}\n\n`; // Add default title
-            markdown += `### Template\n\n`;
-            markdown += `${getEffectiveTemplate(novel)}\n\n`;
-
-            // Ensure chapters is an array before iterating
+            let markdown = `# ${novel.title || "Untitled Novel"}\n\n`;
+            markdown += `### Template\n\n${getEffectiveTemplate(novel)}\n\n`;
             const currentChapters = Array.isArray(novel.chapters)
               ? novel.chapters
               : [];
             currentChapters.forEach((chapter, chapterIndex) => {
               markdown += `## ${
                 chapter.title || `Chapter ${chapterIndex + 1}`
-              }\n\n`; // Add default title
+              }\n\n`;
               if (chapter.summary) {
                 markdown += `### Summary\n\n${chapter.summary}\n\n`;
               }
               markdown += `### Scene Beats\n\n`;
-
-              // Ensure sceneBeats is an array before iterating
               const currentBeats = Array.isArray(chapter.sceneBeats)
                 ? chapter.sceneBeats
                 : [];
@@ -1696,13 +1698,10 @@ STOP EARLY if the continuation contains what was required in the instructions. Y
                 }\n\n`;
               });
             });
-
-            // Show in modal instead of directly copying
             handleShowExportModal(markdown.trim());
             resolve();
           });
         };
-
         const handleImportNovel = (text) => {
           try {
             const novel = {
@@ -1711,19 +1710,35 @@ STOP EARLY if the continuation contains what was required in the instructions. Y
               template: null,
               chapters: [],
             };
-
             const lines = text.split("\n");
             let currentChapter = null;
             let currentBeat = null;
             let readingMode = null; // null | 'summary' | 'description' | 'generated' | 'template'
             let accumulatingText = "";
 
+            const finishAccumulatingText = () => {
+              const content = accumulatingText.trim();
+              if (readingMode === "template") {
+                novel.template =
+                  content && content !== DEFAULT_PROMPT_TEMPLATE
+                    ? content
+                    : null;
+              } else if (readingMode === "summary" && currentChapter) {
+                currentChapter.summary = content;
+              } else if (readingMode === "description" && currentBeat) {
+                currentBeat.text = content;
+              } else if (readingMode === "generated" && currentBeat) {
+                currentBeat.generatedText = content;
+              }
+              accumulatingText = "";
+            };
+
             lines.forEach((line) => {
               const trimmedLine = line.trim();
-
               if (trimmedLine.startsWith("# ")) {
                 finishAccumulatingText();
-                novel.title = trimmedLine.substring(2).trim();
+                novel.title =
+                  trimmedLine.substring(2).trim() || "Imported Novel";
                 readingMode = null;
               } else if (trimmedLine.startsWith("## ")) {
                 finishAccumulatingText();
@@ -1766,28 +1781,21 @@ STOP EARLY if the continuation contains what was required in the instructions. Y
                 finishAccumulatingText();
                 readingMode = "generated";
               } else {
-                accumulatingText += line + "\n";
+                // Only accumulate if we are in a known reading mode or just after a header
+                if (
+                  readingMode ||
+                  line.startsWith(" ") ||
+                  line.startsWith("\t") ||
+                  (accumulatingText && line)
+                ) {
+                  accumulatingText += line + "\n";
+                } else if (trimmedLine) {
+                  // If it's not whitespace and not a header, start accumulating (e.g. first line of template/summary)
+                  accumulatingText += line + "\n";
+                }
               }
             });
-
             finishAccumulatingText(); // Finish last section
-
-            function finishAccumulatingText() {
-              const content = accumulatingText.trim();
-              if (readingMode === "template") {
-                novel.template =
-                  content && content !== DEFAULT_PROMPT_TEMPLATE
-                    ? content
-                    : null;
-              } else if (readingMode === "summary" && currentChapter) {
-                currentChapter.summary = content;
-              } else if (readingMode === "description" && currentBeat) {
-                currentBeat.text = content;
-              } else if (readingMode === "generated" && currentBeat) {
-                currentBeat.generatedText = content;
-              }
-              accumulatingText = "";
-            }
 
             if (
               !novel.title ||
@@ -1797,8 +1805,6 @@ STOP EARLY if the continuation contains what was required in the instructions. Y
             ) {
               console.warn("Imported text might be incomplete or invalid.");
             }
-
-            // Ensure imported chapters/beats have arrays if empty
             if (Array.isArray(novel.chapters)) {
               novel.chapters.forEach((ch) => {
                 ch.sceneBeats = Array.isArray(ch.sceneBeats)
@@ -1808,7 +1814,6 @@ STOP EARLY if the continuation contains what was required in the instructions. Y
             } else {
               novel.chapters = [];
             }
-
             updateNovels((prev) => [...prev, novel]);
           } catch (e) {
             console.error("Import error:", e);
@@ -1818,9 +1823,8 @@ STOP EARLY if the continuation contains what was required in the instructions. Y
           }
         };
 
-        // --- Current Novel Data (Memoized) ---
+        // --- Current Novel Data ---
         const currentNovel = useMemo(() => {
-          // Ensure novels is an array before finding
           if (!Array.isArray(novels)) return null;
           return novels.find((n) => n.id === currentNovelId) || null;
         }, [novels, currentNovelId]);
@@ -1853,8 +1857,8 @@ STOP EARLY if the continuation contains what was required in the instructions. Y
                 onAddBeat={handleAddBeat}
                 onDeleteBeat={handleDeleteBeat}
                 onMoveBeat={handleMoveBeat}
-                onUpdateBeatText={handleUpdateBeatText}
-                onUpdateGeneratedText={handleUpdateGeneratedText}
+                onUpdateBeatText={handleUpdateBeatText} // Pass down for saving beat edit
+                onUpdateGeneratedText={handleUpdateGeneratedText} // Pass down for clear/saving gen text edit
                 onUpdateChapterSummary={handleUpdateChapterSummary}
                 onExportNovel={handleExportNovel}
                 onShowPrompt={handleShowPrompt}
@@ -1862,25 +1866,21 @@ STOP EARLY if the continuation contains what was required in the instructions. Y
                 summaryCollapseStates={summaryCollapseStates}
                 onToggleSummaryCollapse={handleToggleSummaryCollapse}
                 onCopySummaryPrompt={handleCopySummaryPrompt}
-                onEditBeat={handleEditBeat}
+                onEditBeat={handleEditBeat} // Pass down edit beat trigger
+                onShowEditGeneratedTextModal={handleShowEditGeneratedTextModal} // **** PASS DOWN ****
               />
             )}
 
             {/* Render Modals */}
-            {/* ****** FIXED HERE ****** */}
-            {/* Replace modalContent?.type with modalContent && modalContent.type */}
             {modalContent && modalContent.type === "prompt" && (
               <PromptModal
-                // Ensure data exists before accessing text
                 promptText={modalContent.data && modalContent.data.text}
                 onClose={handleCloseModal}
                 onCopy={handleCopyPromptFromModal}
               />
             )}
-            {/* Replace modalContent?.type with modalContent && modalContent.type */}
             {modalContent && modalContent.type === "template" && (
               <TemplateEditorModal
-                // Ensure data exists before accessing properties
                 novelId={modalContent.data && modalContent.data.novelId}
                 currentTemplate={
                   modalContent.data && modalContent.data.currentTemplate
@@ -1890,7 +1890,6 @@ STOP EARLY if the continuation contains what was required in the instructions. Y
                 defaultTemplate={DEFAULT_PROMPT_TEMPLATE}
               />
             )}
-            {/* ****** END FIX ****** */}
             {modalContent && modalContent.type === "export" && (
               <ExportModal
                 exportText={modalContent.data && modalContent.data.text}
@@ -1900,10 +1899,28 @@ STOP EARLY if the continuation contains what was required in the instructions. Y
             )}
             {modalContent && modalContent.type === "editBeat" && (
               <EditBeatModal
+                // Pass necessary data and save handler
                 beatText={modalContent.data && modalContent.data.text}
                 onClose={handleCloseModal}
                 onSave={(editedText) =>
                   handleSaveBeatEdit(
+                    modalContent.data.novelId,
+                    modalContent.data.chapterId,
+                    modalContent.data.beatId,
+                    editedText
+                  )
+                }
+              />
+            )}
+            {/* **** NEW: Render Edit Generated Text Modal **** */}
+            {modalContent && modalContent.type === "editGeneratedText" && (
+              <EditGeneratedTextModal
+                generatedText={
+                  modalContent.data && modalContent.data.generatedText
+                }
+                onClose={handleCloseModal}
+                onSave={(editedText) =>
+                  handleSaveGeneratedText(
                     modalContent.data.novelId,
                     modalContent.data.chapterId,
                     modalContent.data.beatId,
@@ -1918,8 +1935,7 @@ STOP EARLY if the continuation contains what was required in the instructions. Y
 
       // --- Specific Modal Components ---
       function PromptModal({ promptText, onClose, onCopy }) {
-        const [copyFeedback, setCopyFeedback] = useState(""); // "Copied", "Error"
-
+        const [copyFeedback, setCopyFeedback] = useState("");
         const handleCopy = () => {
           onCopy(promptText)
             .then(() => {
@@ -1932,7 +1948,6 @@ STOP EARLY if the continuation contains what was required in the instructions. Y
               setTimeout(() => setCopyFeedback(""), 1500);
             });
         };
-
         return (
           <Modal
             title="Scene Beat Prompt"
@@ -1950,7 +1965,7 @@ STOP EARLY if the continuation contains what was required in the instructions. Y
           >
             <textarea
               className="prompt-textarea"
-              value={promptText || ""} // Ensure value is not null/undefined
+              value={promptText || ""}
               readOnly
             />
           </Modal>
@@ -1964,20 +1979,13 @@ STOP EARLY if the continuation contains what was required in the instructions. Y
         onSave,
         defaultTemplate,
       }) {
-        const [templateText, setTemplateText] = useState(currentTemplate || ""); // Ensure value is not null/undefined
-        const [saveFeedback, setSaveFeedback] = useState("");
-
+        const [templateText, setTemplateText] = useState(currentTemplate || "");
         useEffect(() => {
-          setTemplateText(currentTemplate || ""); // Update if prop changes while open
+          setTemplateText(currentTemplate || "");
         }, [currentTemplate]);
-
         const handleSave = () => {
           onSave(novelId, templateText);
-          // Feedback handled by caller for simplicity now, could add internal feedback too
-          // setSaveFeedback("Saved!");
-          // setTimeout(() => setSaveFeedback(""), 1500);
         };
-
         const handleReset = () => {
           if (
             confirm(
@@ -1987,16 +1995,13 @@ STOP EARLY if the continuation contains what was required in the instructions. Y
             setTemplateText(defaultTemplate);
           }
         };
-
         return (
           <Modal
             title="Edit Continue Prompt Template"
             onClose={onClose}
             footer={
               <React.Fragment>
-                <button onClick={handleSave} disabled={!!saveFeedback}>
-                  {saveFeedback || "Save Template"}
-                </button>
+                <button onClick={handleSave}>Save Template</button>
                 <button className="secondary-btn" onClick={handleReset}>
                   Reset to Default
                 </button>
@@ -2031,7 +2036,6 @@ STOP EARLY if the continuation contains what was required in the instructions. Y
 
       function ExportModal({ exportText, onClose, onCopy }) {
         const [copyFeedback, setCopyFeedback] = useState(false);
-
         const handleCopy = () => {
           onCopy(exportText)
             .then(() => {
@@ -2043,7 +2047,6 @@ STOP EARLY if the continuation contains what was required in the instructions. Y
               alert("Failed to copy. See console for details.");
             });
         };
-
         return (
           <Modal
             title="Export Preview"
@@ -2071,11 +2074,9 @@ STOP EARLY if the continuation contains what was required in the instructions. Y
       // --- Edit Beat Modal Component ---
       function EditBeatModal({ beatText, onClose, onSave }) {
         const [editedText, setEditedText] = useState(beatText || "");
-
         const handleSave = () => {
           onSave(editedText);
         };
-
         return (
           <Modal
             title="Edit Scene Beat Instruction"
@@ -2090,10 +2091,42 @@ STOP EARLY if the continuation contains what was required in the instructions. Y
             }
           >
             <textarea
-              className="prompt-textarea"
+              className="prompt-textarea" // Reuse class
               value={editedText}
               onChange={(e) => setEditedText(e.target.value)}
               placeholder="Enter scene beat instruction..."
+              autoFocus // Focus textarea on open
+            />
+          </Modal>
+        );
+      }
+
+      // --- **** NEW: Edit Generated Text Modal Component **** ---
+      function EditGeneratedTextModal({ generatedText, onClose, onSave }) {
+        const [editedText, setEditedText] = useState(generatedText || "");
+        const handleSave = () => {
+          onSave(editedText);
+        };
+
+        return (
+          <Modal
+            title="Edit Generated Content"
+            onClose={onClose}
+            footer={
+              <React.Fragment>
+                <button onClick={handleSave}>Save Changes</button>
+                <button className="secondary-btn" onClick={onClose}>
+                  Cancel
+                </button>
+              </React.Fragment>
+            }
+          >
+            <textarea
+              className="prompt-textarea" // Reuse class, maybe adjust min-height if needed
+              value={editedText}
+              onChange={(e) => setEditedText(e.target.value)}
+              placeholder="Edit the generated content..."
+              autoFocus // Focus textarea on open
             />
           </Modal>
         );
