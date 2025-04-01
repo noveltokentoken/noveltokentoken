@@ -568,18 +568,9 @@ STOP EARLY if the continuation contains what was required in the instructions. Y
             <div
               className="generated-text-area-display" // Use display class
             >
-              {beat.generatedText || "No generated content yet."}
+              {beat.generatedText}
             </div>
             <div style={{ textAlign: "right", marginTop: "5px" }}>
-              {/* Clear button still uses onUpdateGeneratedText */}
-              <button
-                onClick={() =>
-                  onUpdateGeneratedText(novelId, chapterId, beat.id, "")
-                }
-              >
-                Clear
-              </button>
-              {/* **** NEW EDIT BUTTON **** */}
               <button
                 onClick={() =>
                   onShowEditGeneratedTextModal(
