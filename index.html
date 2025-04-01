@@ -482,14 +482,17 @@ STOP EARLY if the continuation contains what was required in the instructions. Y
             >
               <strong>Scene Beat Instruction:</strong>
             </p>
-            <textarea
+            <p
               className="beat-text-area"
-              placeholder="Scene beat description / instruction..."
-              value={beat.text || ""}
-              onChange={(e) =>
-                onUpdateBeatText(novelId, chapterId, beat.id, e.target.value)
-              }
-            />
+              style={{
+                padding: "8px",
+                backgroundColor: "#f5f5f5",
+                borderRadius: "4px",
+                minHeight: "60px",
+              }}
+            >
+              {beat.text || ""}
+            </p>
 
             <div className="beat-controls">
               <button
@@ -1281,26 +1284,26 @@ STOP EARLY if the continuation contains what was required in the instructions. Y
 
         // New Edit Beat function
         const handleEditBeat = (novelId, chapterId, beatId) => {
-          const novel = novels.find(n => n.id === novelId);
+          const novel = novels.find((n) => n.id === novelId);
           if (!novel || !Array.isArray(novel.chapters)) return;
-          
-          const chapter = novel.chapters.find(ch => ch.id === chapterId);
+
+          const chapter = novel.chapters.find((ch) => ch.id === chapterId);
           if (!chapter || !Array.isArray(chapter.sceneBeats)) return;
-          
-          const beat = chapter.sceneBeats.find(b => b.id === beatId);
+
+          const beat = chapter.sceneBeats.find((b) => b.id === beatId);
           if (!beat) return;
-          
+
           setModalContent({
             type: "editBeat",
             data: {
               novelId,
               chapterId,
               beatId,
-              text: beat.text || ""
-            }
+              text: beat.text || "",
+            },
           });
         };
-        
+
         const handleSaveBeatEdit = (novelId, chapterId, beatId, newText) => {
           handleUpdateBeatText(novelId, chapterId, beatId, newText);
           handleCloseModal();
@@ -1606,7 +1609,7 @@ STOP EARLY if the continuation contains what was required in the instructions. Y
         const handleShowExportModal = (exportText) => {
           setModalContent({
             type: "export",
-            data: { text: exportText }
+            data: { text: exportText },
           });
         };
 
@@ -1899,12 +1902,14 @@ STOP EARLY if the continuation contains what was required in the instructions. Y
               <EditBeatModal
                 beatText={modalContent.data && modalContent.data.text}
                 onClose={handleCloseModal}
-                onSave={(editedText) => handleSaveBeatEdit(
-                  modalContent.data.novelId,
-                  modalContent.data.chapterId,
-                  modalContent.data.beatId,
-                  editedText
-                )}
+                onSave={(editedText) =>
+                  handleSaveBeatEdit(
+                    modalContent.data.novelId,
+                    modalContent.data.chapterId,
+                    modalContent.data.beatId,
+                    editedText
+                  )
+                }
               />
             )}
           </div>
@@ -2066,7 +2071,7 @@ STOP EARLY if the continuation contains what was required in the instructions. Y
       // --- Edit Beat Modal Component ---
       function EditBeatModal({ beatText, onClose, onSave }) {
         const [editedText, setEditedText] = useState(beatText || "");
-        
+
         const handleSave = () => {
           onSave(editedText);
         };
@@ -2078,7 +2083,9 @@ STOP EARLY if the continuation contains what was required in the instructions. Y
             footer={
               <React.Fragment>
                 <button onClick={handleSave}>Save Changes</button>
-                <button className="secondary-btn" onClick={onClose}>Cancel</button>
+                <button className="secondary-btn" onClick={onClose}>
+                  Cancel
+                </button>
               </React.Fragment>
             }
           >
