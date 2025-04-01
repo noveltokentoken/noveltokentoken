@@ -1370,6 +1370,8 @@ STOP EARLY if the continuation contains what was required in the instructions. Y
           markdown += "\n"; // Add extra newline after last beat of chapter
         });
 
+        markdown += `### Template\n\n${novel.template || DEFAULT_PROMPT_TEMPLATE}\n\n`;
+
         copyToClipboard(markdown.trim(), buttonElement);
       }
 
