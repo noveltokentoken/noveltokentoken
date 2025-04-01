@@ -1571,6 +1571,13 @@ STOP EARLY if the continuation contains what was required in the instructions. Y
           });
         };
 
+        const handleShowExportModal = (exportText) => {
+          setModalContent({
+            type: "export",
+            data: { text: exportText }
+          });
+        };
+
         const handleCloseModal = () => {
           setModalContent(null);
         };
@@ -1584,7 +1591,6 @@ STOP EARLY if the continuation contains what was required in the instructions. Y
           // Optionally close modal or show feedback inside
           // For simplicity, we'll just close it here
           handleCloseModal();
-          alert("Template saved!"); // Simple feedback
         };
 
         // --- Copy Actions ---
@@ -1656,7 +1662,9 @@ STOP EARLY if the continuation contains what was required in the instructions. Y
               });
             });
 
-            copyToClipboard(markdown.trim()).then(resolve).catch(reject);
+            // Show in modal instead of directly copying
+            handleShowExportModal(markdown.trim());
+            resolve();
           });
         };
 
@@ -1848,6 +1856,13 @@ STOP EARLY if the continuation contains what was required in the instructions. Y
               />
             )}
             {/* ****** END FIX ****** */}
+            {modalContent && modalContent.type === "export" && (
+              <ExportModal
+                exportText={modalContent.data && modalContent.data.text}
+                onClose={handleCloseModal}
+                onCopy={handleCopyPromptFromModal}
+              />
+            )}
           </div>
         );
       }
@@ -1961,6 +1976,45 @@ STOP EARLY if the continuation contains what was required in the instructions. Y
                 </li>
               </ul>
             </div>
+          </Modal>
+        );
+      }
+
+      function ExportModal({ exportText, onClose, onCopy }) {
+        const [copyFeedback, setCopyFeedback] = useState(false);
+
+        const handleCopy = () => {
+          onCopy(exportText)
+            .then(() => {
+              setCopyFeedback(true);
+              setTimeout(() => setCopyFeedback(false), 1500);
+            })
+            .catch((err) => {
+              console.error("Copy failed:", err);
+              alert("Failed to copy. See console for details.");
+            });
+        };
+
+        return (
+          <Modal
+            title="Export Preview"
+            onClose={onClose}
+            footer={
+              <React.Fragment>
+                <button onClick={handleCopy} disabled={copyFeedback}>
+                  {copyFeedback ? "Copied!" : "Copy to Clipboard"}
+                </button>
+                <button className="secondary-btn" onClick={onClose}>
+                  Close
+                </button>
+              </React.Fragment>
+            }
+          >
+            <textarea
+              className="prompt-textarea"
+              value={exportText || ""}
+              readOnly
+            />
           </Modal>
         );
       }
