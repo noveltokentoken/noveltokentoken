@@ -225,6 +225,7 @@
         width: 100%;
         min-height: 200px;
         margin: 10px 0;
+        box-sizing: border-box; /* Added for consistency */
       }
 
       /* --- New styles for Settings --- */
@@ -322,6 +323,7 @@
         border-radius: 4px;
         margin-bottom: 10px;
         resize: vertical;
+        box-sizing: border-box; /* Added for consistency */
       }
 
       /* --- New styles for collapsible summary --- */
@@ -336,8 +338,9 @@
 
       .summary-header {
         display: flex;
-        align-items: start;
+        align-items: center; /* Changed from start for better alignment */
         cursor: pointer;
+        gap: 5px; /* Add some space between arrow and text */
       }
 
       .summary-header h4 {
@@ -345,8 +348,10 @@
       }
 
       .collapse-indicator {
-        font-size: 18px;
+        font-size: 18px; /* Adjust as needed */
+        line-height: 1; /* Prevent extra space */
         transition: transform 0.3s;
+        display: inline-block; /* Needed for transform */
       }
 
       .collapsed .collapse-indicator {
@@ -372,16 +377,17 @@
         <div class="import-area">
           <textarea
             id="importText"
-            placeholder="Paste exported novel here..."
+            placeholder="Paste exported novel markdown here..."
           ></textarea>
           <button onclick="importNovel()">Import</button>
-          <button onclick="toggleImportArea()">Cancel</button>
+          <button class="secondary-btn" onclick="toggleImportArea()">Cancel</button>
         </div>
       </div>
 
+      <!-- Old Settings View (Placeholder) - Can be removed if Template Editor Modal is sufficient -->
       <div id="settingsView" style="display: none">
         <h2>Settings</h2>
-        <p>Settings content will go here.</p>
+        <p>Settings content will go here. Use the 'Edit Templates' button in the editor view.</p>
         <button onclick="showNovelList()">← Back to Novel List</button>
       </div>
 
@@ -397,7 +403,7 @@
         </div>
         <div class="import-export-area">
           <button onclick="exportNovel(this)">Export Novel</button>
-          <button onclick="showTemplateEditor()">Edit Templates</button>
+          <button onclick="showTemplateEditor()">Edit Continue Prompt Template</button>
           <span class="feedback">Copied!</span>
         </div>
         <div class="chapter-filter">
@@ -425,7 +431,7 @@
           <div class="modal-header">
             <h3 class="modal-title">Scene Beat Prompt</h3>
             <button class="modal-close" onclick="closePromptModal()">
-              &times;
+              ×
             </button>
           </div>
           <div class="modal-body">
@@ -443,31 +449,34 @@
           </div>
         </div>
       </div>
+
+      <!-- Template Editor Modal (dynamically created) -->
+
     </div>
 
     <script>
             const LS_KEY = "novels";
-            const LS_TEMPLATE_KEY = "promptTemplate"; // Key for storing the template
+            const LS_TEMPLATE_KEY = "promptTemplate"; // Legacy key for default, now templates are stored per-novel
             let novels = [];
             let currentNovelId = null;
 
             // --- Default Prompt Template ---
             const DEFAULT_PROMPT_TEMPLATE = `The story so far:
-      {storySoFar}
+{storySoFar}
 
-      You are an expert fiction writer. Continue the story and write about 400 words for the following instructions:
-      {instructions}
+You are an expert fiction writer. Continue the story and write about 400 words for the following instructions:
+{instructions}
 
-      NEVER conclude the scene on your own, follow the beat instructions very closely. NEVER end with foreshadowing. NEVER write further than what I prompt you with. AVOID imagining possible endings, NEVER deviate from the instructions.
+NEVER conclude the scene on your own, follow the beat instructions very closely. NEVER end with foreshadowing. NEVER write further than what I prompt you with. AVOID imagining possible endings, NEVER deviate from the instructions.
 
-      STOP EARLY if the continuation contains what was required in the instructions. You do not need to fill out the full amount of words possible.
+STOP EARLY if the continuation contains what was required in the instructions. You do not need to fill out the full amount of words possible.
 
-      - Do not use bold or italic font.
-      - Do not use expressions like "mechanical precision," "with rapid efficiency," or "at a steady pace", "her stride controlled, efficient", "this is not ideal".
-      - CT32F, from whose perspective the story is told, cannot feel or detect emotions in others. She cannot feel pain. She cannot assess things like beauty, nor does she feel the wind or cold.
-      - Do not measure parameters of the environment or mention these numbers.
-      - Write in active voice. Use British, American, Scientific, International, and Commercial English (Basic English) for everything except dialogues. For dialogues, use the language that ordinary people in the 1980x would use.
-      - Use sarcasm and dry humor. Make sarcastic jokes in the internal monologue.`;
+- Do not use bold or italic font.
+- Do not use expressions like "mechanical precision," "with rapid efficiency," or "at a steady pace", "her stride controlled, efficient", "this is not ideal".
+- CT32F, from whose perspective the story is told, cannot feel or detect emotions in others. She cannot feel pain. She cannot assess things like beauty, nor does she feel the wind or cold.
+- Do not measure parameters of the environment or mention these numbers.
+- Write in active voice. Use British, American, Scientific, International, and Commercial English (Basic English) for everything except dialogues. For dialogues, use the language that ordinary people in the 1980x would use.
+- Use sarcasm and dry humor. Make sarcastic jokes in the internal monologue.`;
 
             // --- Core Data Management ---
 
@@ -479,8 +488,9 @@
                 console.error("Error loading novels from local storage:", e);
                 novels = []; // Reset if data is corrupted
               }
-              // Ensure basic structure integrity
+              // Ensure basic structure integrity and add novel-specific template field if missing
               novels.forEach((novel) => {
+                novel.template = novel.template || null; // Add template field if missing, default to null (will fallback to global)
                 novel.chapters = novel.chapters || [];
                 novel.chapters.forEach((chapter) => {
                   chapter.sceneBeats = chapter.sceneBeats || [];
@@ -516,24 +526,94 @@
             }
 
             function generateId() {
-              return Date.now().toString();
+              return Date.now().toString(36) + Math.random().toString(36).substring(2);
             }
 
             // --- Prompt Template Management ---
 
-            function getPromptTemplate() {
-              return localStorage.getItem(LS_TEMPLATE_KEY) || DEFAULT_PROMPT_TEMPLATE;
+            // Gets the novel-specific template or falls back to the default
+            function getEffectiveTemplate(novel) {
+                return novel?.template || DEFAULT_PROMPT_TEMPLATE;
             }
 
-            function savePromptTemplate(templateText) {
-              try {
-                localStorage.setItem(LS_TEMPLATE_KEY, templateText);
-                return true;
-              } catch (e) {
-                console.error("Error saving prompt template:", e);
-                alert("Error saving template. Local storage might be full.");
-                return false;
+            // Used for the modal editor to show the correct content
+            function showTemplateEditor() {
+              const novel = getNovelById(currentNovelId);
+              if (!novel) return;
+
+              // Close existing modal if any
+              const existingModal = document.querySelector('.modal-overlay[data-modal-type="template-editor"]');
+              if (existingModal) existingModal.remove();
+
+              const modal = document.createElement("div");
+              modal.classList.add("modal-overlay");
+              modal.dataset.modalType = "template-editor"; // Add identifier
+              modal.style.display = "flex";
+              modal.innerHTML = `
+                <div class="modal-dialog">
+                  <div class="modal-header">
+                    <h3 class="modal-title">Edit Continue Prompt Template</h3>
+                    <button class="modal-close" onclick="closeTemplateEditor(this)">×</button>
+                  </div>
+                  <div class="modal-body">
+                    <textarea
+                      id="templateTextarea"
+                      class="prompt-textarea"
+                    >${getEffectiveTemplate(novel)}</textarea> <!-- Use effective template -->
+                    <div class="template-help">
+                      <p>Use these placeholders:</p>
+                      <ul>
+                        <li><code>{storySoFar}</code> - Context from previous chapters/beats.</li>
+                        <li><code>{instructions}</code> - The text from the current scene beat description.</li>
+                      </ul>
+                    </div>
+                  </div>
+                  <div class="modal-footer">
+                    <button onclick="saveTemplate('${novel.id}', this)">Save Template</button>
+                    <button class="secondary-btn" onclick="resetTemplateInEditor('${novel.id}')">Reset to Default</button>
+                    <button class="secondary-btn" onclick="closeTemplateEditor(this)">Close</button>
+                  </div>
+                </div>
+              `;
+              document.body.appendChild(modal);
+              // Focus the textarea
+              const textarea = modal.querySelector('#templateTextarea');
+              if (textarea) textarea.focus();
+            }
+
+            function closeTemplateEditor(button) {
+              const modal = button.closest(".modal-overlay");
+              if (modal) modal.remove();
+            }
+
+            function saveTemplate(novelId, button) {
+              const novel = getNovelById(novelId);
+              if (!novel) return;
+
+              const textarea = document.getElementById("templateTextarea");
+              if (textarea) {
+                const newTemplate = textarea.value;
+                // Only save if it's different from the default, otherwise store null
+                novel.template = (newTemplate !== DEFAULT_PROMPT_TEMPLATE) ? newTemplate : null;
+                saveNovels();
+                // Show feedback within the modal
+                const originalText = button.textContent;
+                button.textContent = "Saved!";
+                button.disabled = true;
+                setTimeout(() => {
+                   button.textContent = originalText;
+                   button.disabled = false;
+                }, 1500);
               }
+            }
+
+            function resetTemplateInEditor(novelId) {
+                 if (confirm("Are you sure you want to reset the template in the editor to the default? This won't save until you click 'Save Template'.")) {
+                    const textarea = document.getElementById("templateTextarea");
+                    if (textarea) {
+                        textarea.value = DEFAULT_PROMPT_TEMPLATE;
+                    }
+                }
             }
 
             // --- UI Rendering ---
@@ -547,6 +627,8 @@
                   "<li>No novels found. Create one below or import one.</li>";
                 return;
               }
+
+              novels.sort((a, b) => (a.title || "").localeCompare(b.title || "")); // Sort novels alphabetically
 
               novels.forEach((novel) => {
                 const li = document.createElement("li");
@@ -570,6 +652,7 @@
               if (novel) {
                 novel.title = newTitle.trim() || "Untitled Novel";
                 saveNovels();
+                 // No need to re-render entire list, just update title if needed (not strictly necessary)
               }
             }
 
@@ -592,7 +675,7 @@
                 const chapterEl = document.createElement("div");
                 chapterEl.classList.add("chapter");
                 chapterEl.dataset.chapterId = chapter.id;
-                chapterEl.dataset.chapterIndex = index;
+                chapterEl.dataset.chapterIndex = index; // Keep track of index for moving
 
                 chapterEl.innerHTML = `
                       <div class="chapter-header">
@@ -604,10 +687,10 @@
                               placeholder="Chapter Title"
                           />
                           <div class="chapter-controls">
-                              <button class="move-btn" onclick="moveChapter('${novel.id}', ${index}, -1)" ${
+                              <button class="move-btn" onclick="moveChapter('${novel.id}', '${chapter.id}', -1)" ${
                   index === 0 ? "disabled" : ""
                 }>↑</button>
-                              <button class="move-btn" onclick="moveChapter('${novel.id}', ${index}, 1)" ${
+                              <button class="move-btn" onclick="moveChapter('${novel.id}', '${chapter.id}', 1)" ${
                   index === novel.chapters.length - 1 ? "disabled" : ""
                 }>↓</button>
                               <button class="delete-btn" onclick="deleteChapter('${novel.id}', '${chapter.id}')">Delete Chapter</button>
@@ -619,7 +702,7 @@
                       </div>
 
                       <div class="add-beat-area">
-                          <textarea class="new-beat-text" placeholder="Add new scene beat..."></textarea>
+                          <textarea class="new-beat-text" placeholder="Add new scene beat instruction..."></textarea>
                           <button onclick="addSceneBeat('${novel.id}', '${chapter.id}')">+ Add Beat</button>
                       </div>
 
@@ -627,7 +710,7 @@
 
                       <div>
                           <div class="summary-header" onclick="toggleChapterSummary('${chapter.id}')">
-                              <span class="collapse-indicator">▼</span>
+                              <span class="collapse-indicator">▼</span> <!-- Default open arrow -->
                               <h4>Chapter Summary</h4>
                           </div>
                           <div class="summary-section" id="summary-section-${chapter.id}">
@@ -647,7 +730,7 @@
                 );
                 const indicator = chapterEl.querySelector(".collapse-indicator");
                 // Default to collapsed (true) if no state is stored for this chapter
-                const isCollapsed = summaryStates[chapter.id] ?? true;
+                const isCollapsed = summaryStates[chapter.id] ?? true; // Default collapsed
 
                 if (summarySection && indicator) {
                   if (isCollapsed) {
@@ -666,50 +749,8 @@
                   chapterEl.querySelector(".scene-beats-container")
                 );
               });
-
-            function showTemplateEditor() {
-              const novel = getNovelById(currentNovelId);
-              if (!novel) return;
-
-              const modal = document.createElement("div");
-              modal.classList.add("modal-overlay");
-              modal.style.display = "flex";
-              modal.innerHTML = `
-                <div class="modal-dialog">
-                  <div class="modal-header">
-                    <h3 class="modal-title">Edit Continue Prompt Template</h3>
-                    <button class="modal-close" onclick="closeTemplateEditor(this)">&times;</button>
-                  </div>
-                  <div class="modal-body">
-                    <textarea
-                      id="templateTextarea"
-                      class="prompt-textarea"
-                    >${novel.template || DEFAULT_PROMPT_TEMPLATE}</textarea>
-                  </div>
-                  <div class="modal-footer">
-                    <button onclick="saveTemplate('${novel.id}', this)">Save Template</button>
-                    <button class="secondary-btn" onclick="closeTemplateEditor(this)">Close</button>
-                  </div>
-                </div>
-              `;
-              document.body.appendChild(modal);
-            }
-
-            function closeTemplateEditor(button) {
-              const modal = button.closest(".modal-overlay");
-              if (modal) modal.remove();
-            }
-
-            function saveTemplate(novelId, button) {
-              const novel = getNovelById(novelId);
-              if (!novel) return;
-
-              const textarea = document.getElementById("templateTextarea");
-              if (textarea) {
-                novel.template = textarea.value;
-                saveNovels();
-                showFeedback(button);
-              }
+              // Apply filter after rendering
+              filterChapters(document.getElementById('chapterFilter').value);
             }
 
             function renderSceneBeats(novelId, chapterId, container) {
@@ -727,37 +768,31 @@
                 const beatEl = document.createElement("div");
                 beatEl.classList.add("scene-beat");
                 beatEl.dataset.beatId = beat.id;
-                beatEl.dataset.beatIndex = index;
+                beatEl.dataset.beatIndex = index; // Keep track of index for moving
 
                 beatEl.innerHTML = `
+                       <p style="margin-bottom: 2px; font-size: 0.9em; color: #555;"><strong>Scene Beat Instruction:</strong></p>
                       <textarea
                           class="beat-text-area"
-                          placeholder="Scene beat description..."
-                          onchange="updateSceneBeatText('${novelId}', '${chapterId}', '${
-                  beat.id
-                }', this.value)"
+                          placeholder="Scene beat description / instruction..."
+                          onchange="updateSceneBeatText('${novelId}', '${chapterId}', '${beat.id}', this.value)"
                       >${beat.text || ""}</textarea>
 
                       <div class="beat-controls">
-                          <button class="move-btn" onclick="moveSceneBeat('${novelId}', '${chapterId}', ${index}, -1)" ${
+                          <button class="move-btn" onclick="moveSceneBeat('${novelId}', '${chapterId}', '${beat.id}', -1)" ${
                   index === 0 ? "disabled" : ""
                 }>↑</button>
-                          <button class="move-btn" onclick="moveSceneBeat('${novelId}', '${chapterId}', ${index}, 1)" ${
+                          <button class="move-btn" onclick="moveSceneBeat('${novelId}', '${chapterId}', '${beat.id}', 1)" ${
                   index === chapter.sceneBeats.length - 1 ? "disabled" : ""
                 }>↓</button>
-                          <button onclick="showPromptDialog('${novelId}', '${chapterId}', '${
-                  beat.id
-                }')">Show Scene Beat Prompt</button>
-                          <button class="delete-btn" onclick="deleteSceneBeat('${novelId}', '${chapterId}', '${
-                  beat.id
-                }')">Delete Beat</button>
+                          <button onclick="showPromptDialog('${novelId}', '${chapterId}', '${beat.id}')">Show Prompt</button>
+                          <button class="delete-btn" onclick="deleteSceneBeat('${novelId}', '${chapterId}', '${beat.id}')">Delete Beat</button>
                       </div>
+                       <p style="margin-bottom: 2px; font-size: 0.9em; color: #555;"><strong>AI Generated Content:</strong></p>
                        <textarea
                           class="generated-text-area"
                           placeholder="Paste AI generated content here..."
-                          onchange="updateGeneratedText('${novelId}', '${chapterId}', '${
-                  beat.id
-                }', this.value)"
+                          onchange="updateGeneratedText('${novelId}', '${chapterId}', '${beat.id}', this.value)"
                       >${beat.generatedText || ""}</textarea>
                   `;
                 container.appendChild(beatEl);
@@ -766,13 +801,9 @@
 
             // --- Render chapter filter dropdown ---
             function updateChapterFilter() {
-              if (!currentNovelId) return;
-
               const novel = getNovelById(currentNovelId);
-              if (!novel) return;
-
               const filterSelect = document.getElementById('chapterFilter');
-              if (!filterSelect) return;
+              if (!novel || !filterSelect) return;
 
               // Save current selection if any
               const currentValue = filterSelect.value;
@@ -790,33 +821,47 @@
                 filterSelect.appendChild(option);
               });
 
-              // Restore selection if possible
-              if (currentValue && [...filterSelect.options].some(opt => opt.value === currentValue)) {
-                filterSelect.value = currentValue;
+              // Restore selection if possible, otherwise default to 'all'
+              if (currentValue && novel.chapters.some(ch => ch.id === currentValue)) {
+                 filterSelect.value = currentValue;
               } else {
-                filterSelect.value = 'all'; // Default to All Chapters
+                 filterSelect.value = 'all'; // Default to All Chapters
               }
 
-              // Apply current filter
+              // Apply the filter (important after loading/modifying chapters)
               filterChapters(filterSelect.value);
             }
 
             // --- Filter chapters based on selection ---
             function filterChapters(chapterId) {
               const chaptersContainer = document.getElementById('chaptersContainer');
+              if (!chaptersContainer) return;
               const chapterElements = chaptersContainer.querySelectorAll('.chapter');
 
-              if (chapterId === 'all') {
-                // Show all chapters
-                chapterElements.forEach(el => {
-                  el.style.display = 'block';
-                });
-              } else {
-                // Show only the selected chapter
-                chapterElements.forEach(el => {
-                  el.style.display = el.dataset.chapterId === chapterId ? 'block' : 'none';
-                });
-              }
+              let foundVisible = false;
+              chapterElements.forEach(el => {
+                const isVisible = (chapterId === 'all' || el.dataset.chapterId === chapterId);
+                el.style.display = isVisible ? 'block' : 'none';
+                if (isVisible) foundVisible = true;
+              });
+
+              // Optional: Add message if filter results in no visible chapters
+               if (chapterId !== 'all' && !foundVisible && chapterElements.length > 0) {
+                   let messageEl = chaptersContainer.querySelector('.no-chapter-match-message');
+                   if (!messageEl) {
+                       messageEl = document.createElement('p');
+                       messageEl.className = 'no-chapter-match-message';
+                       messageEl.style.fontStyle = 'italic';
+                       messageEl.style.color = '#888';
+                       chaptersContainer.appendChild(messageEl);
+                   }
+                   messageEl.textContent = `Chapter not found or no chapters exist matching the filter. Showing all.`;
+                   filterSelect.value = 'all'; // Reset dropdown
+                   filterChapters('all'); // Show all again
+               } else {
+                   const messageEl = chaptersContainer.querySelector('.no-chapter-match-message');
+                   if (messageEl) messageEl.remove(); // Remove message if chapters are visible
+               }
             }
 
             // --- UI Navigation ---
@@ -824,7 +869,7 @@
             function showView(viewId) {
               document.getElementById("novelListView").style.display = "none";
               document.getElementById("novelEditorView").style.display = "none";
-              document.getElementById("settingsView").style.display = "none";
+              document.getElementById("settingsView").style.display = "none"; // Hide placeholder settings view
 
               const view = document.getElementById(viewId);
               if (view) {
@@ -849,42 +894,7 @@
               if (!currentNovelId) return;
               showView("novelEditorView");
               renderNovelEditor();
-              updateChapterFilter(); // Update the chapter filter dropdown
-            }
-
-            function hideSettings() {
-              // Go back to the novel list view after closing settings
-              showNovelList();
-            }
-
-            // --- Settings Actions ---
-
-            function saveTemplateSettings() {
-              const templateText = document.getElementById(
-                "promptTemplateTextarea"
-              ).value;
-              if (savePromptTemplate(templateText)) {
-                // Show feedback
-                const feedbackEl = document.getElementById("settingsFeedback");
-                feedbackEl.classList.add("show");
-                setTimeout(() => {
-                  feedbackEl.classList.remove("show");
-                }, 1500);
-              }
-            }
-
-            function resetTemplateToDefault() {
-              if (
-                confirm(
-                  "Are you sure you want to reset the prompt template to its default value? Unsaved changes will be lost."
-                )
-              ) {
-                document.getElementById("promptTemplateTextarea").value =
-                  DEFAULT_PROMPT_TEMPLATE;
-                // Optionally, you could save immediately after reset:
-                // savePromptTemplate(DEFAULT_PROMPT_TEMPLATE);
-                // alert("Template reset to default.");
-              }
+              updateChapterFilter(); // Update and apply the chapter filter dropdown
             }
 
             // --- Novel Actions ---
@@ -895,6 +905,7 @@
               const newNovel = {
                 id: generateId(),
                 title: title,
+                template: null, // Initialize template as null (will use default)
                 chapters: [],
               };
               novels.push(newNovel);
@@ -915,7 +926,7 @@
                 confirm(
                   `Are you sure you want to delete the novel "${
                     novelToDelete.title || "Untitled Novel"
-                  }"? This cannot be undone.`
+                  }"? This action cannot be undone.`
                 )
               ) {
                 novels = novels.filter((novel) => novel.id !== id);
@@ -923,6 +934,7 @@
                 renderNovelList(); // Refresh list view
               }
             }
+
             function deleteCurrentNovel() {
               if (currentNovelId) {
                 const novelToDelete = getNovelById(currentNovelId);
@@ -931,7 +943,7 @@
                   confirm(
                     `Are you sure you want to delete the novel "${
                       novelToDelete.title || "Untitled Novel"
-                    }"? This cannot be undone.`
+                    }"? This action cannot be undone.`
                   )
                 ) {
                   novels = novels.filter((novel) => novel.id !== currentNovelId);
@@ -957,12 +969,20 @@
               saveNovels();
               renderNovelEditor();
               updateChapterFilter(); // Update filter after adding a chapter
+              // Scroll to the new chapter? Optional.
+               setTimeout(() => { // Allow DOM update
+                   const newChapterEl = document.querySelector(`.chapter[data-chapter-id="${newChapter.id}"]`);
+                   if(newChapterEl) newChapterEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
+               }, 100);
             }
 
             function deleteChapter(novelId, chapterId) {
               const novel = getNovelById(novelId);
               if (!novel) return;
-              const chapter = getChapterById(novel, chapterId);
+              const chapterIndex = novel.chapters.findIndex(ch => ch.id === chapterId);
+              if (chapterIndex === -1) return; // Not found
+
+              const chapter = novel.chapters[chapterIndex];
 
               if (
                 confirm(
@@ -971,10 +991,8 @@
                   }" and all its scene beats?`
                 )
               ) {
-                novel.chapters = novel.chapters.filter(
-                  (chap) => chap.id !== chapterId
-                );
-                removeChapterSummaryState(chapterId);
+                novel.chapters.splice(chapterIndex, 1); // Remove chapter by index
+                removeChapterSummaryState(chapterId); // Clean up summary state
                 saveNovels();
                 renderNovelEditor(); // Re-render the editor view
                 updateChapterFilter(); // Update filter after deleting
@@ -991,26 +1009,33 @@
               }
             }
 
-            // --- Update moveChapter to refresh the filter ---
-            function moveChapter(novelId, chapterIndex, direction) {
+            // Updated moveChapter to use chapter ID for robustness
+            function moveChapter(novelId, chapterId, direction) {
               // direction: -1 for up, 1 for down
               const novel = getNovelById(novelId);
               if (!novel) return;
+
+              const chapterIndex = novel.chapters.findIndex(ch => ch.id === chapterId);
+              if (chapterIndex === -1) return; // Chapter not found
 
               const newIndex = chapterIndex + direction;
               if (newIndex < 0 || newIndex >= novel.chapters.length) {
                 return; // Invalid move
               }
 
-              // Swap elements using array destructuring for conciseness
-              [novel.chapters[chapterIndex], novel.chapters[newIndex]] = [
-                novel.chapters[newIndex],
-                novel.chapters[chapterIndex],
-              ];
+              // Swap elements
+              const temp = novel.chapters[chapterIndex];
+              novel.chapters[chapterIndex] = novel.chapters[newIndex];
+              novel.chapters[newIndex] = temp;
+              // Or using array destructuring:
+              // [novel.chapters[chapterIndex], novel.chapters[newIndex]] = [novel.chapters[newIndex], novel.chapters[chapterIndex]];
 
               saveNovels();
+              const currentFilter = document.getElementById('chapterFilter').value; // Preserve filter
               renderNovelEditor(); // Re-render to reflect new order
-              updateChapterFilter(); // Update filter after moving chapters
+              updateChapterFilter(); // Update filter dropdown order
+              document.getElementById('chapterFilter').value = currentFilter; // Restore filter selection
+              filterChapters(currentFilter); // Re-apply filter
             }
 
             // --- Scene Beat Actions ---
@@ -1024,12 +1049,12 @@
               const chapterElement = document.querySelector(
                 `.chapter[data-chapter-id="${chapterId}"]`
               );
-              if (!chapterElement) return; // Should not happen normally
+              if (!chapterElement) return;
               const newBeatTextArea = chapterElement.querySelector(".new-beat-text");
               const text = newBeatTextArea.value.trim();
 
               if (!text) {
-                alert("Please enter some text for the scene beat.");
+                alert("Please enter some text for the scene beat instruction.");
                 return;
               }
 
@@ -1049,8 +1074,8 @@
               renderSceneBeats(novelId, chapterId, beatsContainer);
               newBeatTextArea.focus(); // Focus input for quick next entry
 
-              // Ensure summaries are properly initialized after adding content
-              initializeCollapsibleSummaries();
+              // Ensure summaries are properly initialized (might not be needed here, but safe)
+              // initializeCollapsibleSummaries(); // Called within renderNovelEditor -> renderSceneBeats lifecycle
             }
 
             function deleteSceneBeat(novelId, chapterId, beatId) {
@@ -1058,27 +1083,23 @@
               const chapter = getChapterById(novel, chapterId);
               if (!chapter) return;
 
+              const beatIndex = chapter.sceneBeats.findIndex(b => b.id === beatId);
+              if (beatIndex === -1) return; // Not found
+
               if (confirm("Are you sure you want to delete this scene beat?")) {
-                const initialLength = chapter.sceneBeats.length;
-                chapter.sceneBeats = chapter.sceneBeats.filter(
-                  (beat) => beat.id !== beatId
+                chapter.sceneBeats.splice(beatIndex, 1); // Remove beat by index
+                saveNovels();
+                // Re-render just the scene beats for this chapter
+                const chapterElement = document.querySelector(
+                  `.chapter[data-chapter-id="${chapterId}"]`
                 );
-                if (chapter.sceneBeats.length < initialLength) {
-                  // Check if deletion happened
-                  saveNovels();
-                  // Re-render just the scene beats for this chapter
-                  const chapterElement = document.querySelector(
-                    `.chapter[data-chapter-id="${chapterId}"]`
+                if (chapterElement) {
+                  const beatsContainer = chapterElement.querySelector(
+                    ".scene-beats-container"
                   );
-                  if (chapterElement) {
-                    // Check if element exists before querying
-                    const beatsContainer = chapterElement.querySelector(
-                      ".scene-beats-container"
-                    );
-                    renderSceneBeats(novelId, chapterId, beatsContainer);
-                  } else {
-                    renderNovelEditor(); // Fallback to full render if element not found
-                  }
+                  renderSceneBeats(novelId, chapterId, beatsContainer);
+                } else {
+                  renderNovelEditor(); // Fallback to full render if element not found
                 }
               }
             }
@@ -1087,9 +1108,9 @@
               const novel = getNovelById(novelId);
               const chapter = getChapterById(novel, chapterId);
               const beat = getSceneBeatById(chapter, beatId);
+              // No trimming here, preserve user input exactly
               if (beat && beat.text !== newText) {
-                // Only save if text changed
-                beat.text = newText; // Keep whitespace as entered
+                beat.text = newText;
                 saveNovels();
               }
             }
@@ -1098,18 +1119,22 @@
               const novel = getNovelById(novelId);
               const chapter = getChapterById(novel, chapterId);
               const beat = getSceneBeatById(chapter, beatId);
+              // No trimming here, preserve AI output exactly
               if (beat && beat.generatedText !== genText) {
-                // Only save if text changed
                 beat.generatedText = genText;
                 saveNovels();
               }
             }
 
-            function moveSceneBeat(novelId, chapterId, beatIndex, direction) {
+             // Updated moveSceneBeat to use beat ID for robustness
+            function moveSceneBeat(novelId, chapterId, beatId, direction) {
               // -1 up, 1 down
               const novel = getNovelById(novelId);
               const chapter = getChapterById(novel, chapterId);
               if (!chapter) return;
+
+              const beatIndex = chapter.sceneBeats.findIndex(b => b.id === beatId);
+               if (beatIndex === -1) return; // Beat not found
 
               const newIndex = beatIndex + direction;
               if (newIndex < 0 || newIndex >= chapter.sceneBeats.length) {
@@ -1117,10 +1142,11 @@
               }
 
               // Swap elements
-              [chapter.sceneBeats[beatIndex], chapter.sceneBeats[newIndex]] = [
-                chapter.sceneBeats[newIndex],
-                chapter.sceneBeats[beatIndex],
-              ];
+               const temp = chapter.sceneBeats[beatIndex];
+               chapter.sceneBeats[beatIndex] = chapter.sceneBeats[newIndex];
+               chapter.sceneBeats[newIndex] = temp;
+              // Or using array destructuring:
+              // [chapter.sceneBeats[beatIndex], chapter.sceneBeats[newIndex]] = [chapter.sceneBeats[newIndex], chapter.sceneBeats[beatIndex]];
 
               saveNovels();
               // Re-render just the scene beats for this chapter
@@ -1128,7 +1154,6 @@
                 `.chapter[data-chapter-id="${chapterId}"]`
               );
               if (chapterElement) {
-                // Check if element exists before querying
                 const beatsContainer = chapterElement.querySelector(
                   ".scene-beats-container"
                 );
@@ -1138,59 +1163,98 @@
               }
             }
 
+            function updateChapterSummary(novelId, chapterId, summaryText) {
+                const novel = getNovelById(novelId);
+                const chapter = getChapterById(novel, chapterId);
+                if (chapter && chapter.summary !== summaryText) {
+                    chapter.summary = summaryText; // Preserve exact text
+                    saveNovels();
+                }
+            }
+
             // --- Prompt Generation & Clipboard ---
 
             function showPromptDialog(novelId, chapterId, beatId) {
               const novel = getNovelById(novelId);
               const chapter = getChapterById(novel, chapterId);
               const beat = getSceneBeatById(chapter, beatId);
-              if (!novel || !chapter || !beat) return;
+              if (!novel || !chapter || !beat) {
+                  console.error("Missing data for prompt generation:", { novelId, chapterId, beatId });
+                  alert("Error: Could not find necessary data to generate prompt.");
+                  return;
+              }
 
-              // Generate the prompt
-              const chapterIndex = novel.chapters.findIndex(
-                (ch) => ch.id === chapterId
-              );
-              const beatIndex = chapter.sceneBeats.findIndex((b) => b.id === beatId);
+              // Find indices
+              const chapterIndex = novel.chapters.findIndex(ch => ch.id === chapterId);
+              const beatIndex = chapter.sceneBeats.findIndex(b => b.id === beatId);
+              if (chapterIndex === -1 || beatIndex === -1) {
+                   console.error("Error finding chapter/beat index:", { chapterIndex, beatIndex });
+                   alert("Error: Could not determine position in story.");
+                   return;
+              }
 
               // Build story so far section
               let storySoFar = "";
+              const maxContextLength = 10000; // Limit context length (characters) to avoid overly long prompts
 
-              // Add previous chapters' summaries
+              // 1. Add previous chapters' summaries (or full text if no summary)
               for (let i = 0; i < chapterIndex; i++) {
                 const prevChapter = novel.chapters[i];
+                let chapterContext = "";
                 if (prevChapter.summary) {
-                  storySoFar += `Summary of Chapter ${i + 1}: ${
-                    prevChapter.title || "Untitled"
-                  }\n${prevChapter.summary}\n\n`;
+                  chapterContext = `Summary of Chapter ${i + 1}: ${prevChapter.title || "Untitled"}\n${prevChapter.summary}\n\n`;
                 } else {
                   // Fallback: Use generated text of previous chapter beats if no summary
                   const prevChapterText = prevChapter.sceneBeats
-                    .map((b) => b.generatedText || "")
-                    .filter(Boolean)
-                    .join("\n");
+                    .map((b) => b.generatedText || "") // Prioritize generated text
+                    .filter(Boolean) // Remove empty strings
+                    .join("\n\n"); // Separate beats clearly
                   if (prevChapterText) {
-                    storySoFar += `Content from Chapter ${i + 1}: ${
-                      prevChapter.title || "Untitled"
-                    }\n${prevChapterText}\n\n`;
+                     chapterContext = `Content from Chapter ${i + 1}: ${prevChapter.title || "Untitled"}\n${prevChapterText}\n\n`;
                   }
                 }
+                 // Add context if it doesn't exceed limit drastically (rough check)
+                 if ((storySoFar.length + chapterContext.length) < maxContextLength * 1.2) {
+                    storySoFar += chapterContext;
+                 } else {
+                    console.warn(`Context limit reached, stopping at Chapter ${i}`);
+                    break; // Stop adding chapters if context gets too long
+                 }
               }
 
-              // Add current chapter's previous generated beats
+              // 2. Add current chapter's previous generated beats' text
               for (let i = 0; i < beatIndex; i++) {
                 const prevBeat = chapter.sceneBeats[i];
                 if (prevBeat.generatedText) {
-                  storySoFar += prevBeat.generatedText + "\n\n";
+                   const beatText = prevBeat.generatedText + "\n\n"; // Double newline between beats
+                   if ((storySoFar.length + beatText.length) < maxContextLength * 1.2) {
+                       storySoFar += beatText;
+                   } else {
+                       console.warn(`Context limit reached, stopping at Beat ${i} in Chapter ${chapterIndex + 1}`);
+                       break; // Stop adding beats if context gets too long
+                   }
                 }
               }
+
+              // Truncate storySoFar if it exceeds the limit
+              if (storySoFar.length > maxContextLength) {
+                 const excess = storySoFar.length - maxContextLength;
+                 storySoFar = `... (trimmed ${excess} characters)\n` + storySoFar.slice(excess);
+                 console.warn(`Story context truncated to ${maxContextLength} characters.`);
+              }
+
               storySoFar = storySoFar.trim();
 
-              // Get the template and prepare the prompt
-              const template = getPromptTemplate();
+              // Get the effective template for this novel
+              const template = getEffectiveTemplate(novel);
+
+              // Prepare the instructions (current beat's text)
               const instructionsText = beat.text || "";
+
+              // Replace placeholders
               let prompt = template.replace(
                 "{storySoFar}",
-                storySoFar || "This is the beginning of the story."
+                storySoFar || "This is the beginning of the story." // Add fallback if storySoFar is empty
               );
               prompt = prompt.replace("{instructions}", instructionsText);
 
@@ -1209,48 +1273,54 @@
 
             function copyPromptFromModal() {
               const promptText = document.getElementById("promptTextarea").value;
-              navigator.clipboard
-                .writeText(promptText)
-                .then(() => {
-                  // Show feedback inside the modal
-                  const copyButton = document.querySelector("#promptModal button");
-                  if (copyButton) {
-                    const originalText = copyButton.textContent;
-                    copyButton.textContent = "Copied!";
-                    setTimeout(() => {
-                      copyButton.textContent = originalText;
-                    }, 1500);
-                  }
-                  console.log("Prompt copied to clipboard");
-                })
-                .catch((err) => {
-                  console.error("Failed to copy text: ", err);
-                  alert(
-                    "Failed to copy prompt. Your browser might not support this feature or permission was denied."
-                  );
-                });
+              const copyButton = document.querySelector("#promptModal .modal-footer button:first-child"); // More specific selector
+              copyToClipboard(promptText, copyButton); // Reuse copyToClipboard
             }
 
-            function showFeedback(buttonElement) {
-              // Show feedback next to the button
-              const feedbackEl = buttonElement.nextElementSibling;
-              if (
-                feedbackEl &&
-                (feedbackEl.classList.contains("feedback") ||
-                  feedbackEl.id === "settingsFeedback")
-              ) {
+            function showFeedback(buttonElement, message = "Copied!") {
+              // Show feedback next to the button or find a suitable sibling
+              let feedbackEl = buttonElement?.nextElementSibling;
+              if (!feedbackEl || !feedbackEl.classList.contains("feedback")) {
+                  // If no direct sibling, maybe it's inside a parent div
+                  feedbackEl = buttonElement?.closest('div')?.querySelector('.feedback');
+              }
+
+              // Handle feedback for modal buttons specifically
+               if (buttonElement?.closest('.modal-footer')) {
+                  const originalText = buttonElement.textContent;
+                  buttonElement.textContent = message;
+                  buttonElement.disabled = true;
+                  setTimeout(() => {
+                      buttonElement.textContent = originalText;
+                      buttonElement.disabled = false;
+                  }, 1500);
+                  return; // Don't use the .feedback span for modal buttons
+               }
+
+              if (feedbackEl) {
+                feedbackEl.textContent = message; // Allow custom messages
                 feedbackEl.classList.add("show");
                 setTimeout(() => {
                   feedbackEl.classList.remove("show");
+                   feedbackEl.textContent = "Copied!"; // Reset text
                 }, 1500); // Hide after 1.5 seconds
+              } else {
+                console.warn("Could not find feedback element for button:", buttonElement);
+                // Fallback alert if feedback element isn't found
+                // alert(message);
               }
             }
 
             function copyToClipboard(text, buttonElement) {
+              if (!text) {
+                  console.warn("Attempted to copy empty text.");
+                  showFeedback(buttonElement, "Nothing to copy!");
+                  return;
+              }
               navigator.clipboard
                 .writeText(text)
                 .then(() => {
-                  showFeedback(buttonElement);
+                  showFeedback(buttonElement); // Default "Copied!" message
                   console.log("Text copied to clipboard");
                 })
                 .catch((err) => {
@@ -1266,76 +1336,30 @@
               const chapter = getChapterById(novel, chapterId);
               if (!chapter) return;
 
-              // Collect only the generated text for summary, assuming that's what should be summarized.
+              // Collect only the generated text for summary.
               let chapterText = chapter.sceneBeats
-                .map((beat) => beat.generatedText || beat.text)
-                .filter(Boolean)
-                .join("\n\n");
+                .map((beat) => beat.generatedText || "") // Only generated text
+                .filter(Boolean) // Filter out empty strings
+                .join("\n\n"); // Join with double newline for clarity
+
+              if (!chapterText) {
+                  alert("No generated content in this chapter to summarize.");
+                  return;
+              }
+
               const prompt = `Please write a concise summary of the following chapter content:\n\n${chapterText}`;
               copyToClipboard(prompt, buttonElement);
             }
 
-            function copyContinuePrompt(novelId, chapterId, beatId, buttonElement) {
-              const novel = getNovelById(novelId);
-              const chapter = getChapterById(novel, chapterId);
-              const beat = getSceneBeatById(chapter, beatId);
-              if (!novel || !chapter || !beat) return;
+            // copyContinuePrompt is effectively replaced by showPromptDialog + copyPromptFromModal
+            // Kept here for reference or potential future use if direct button is needed again.
+            // function copyContinuePrompt(novelId, chapterId, beatId, buttonElement) {
+            //    showPromptDialog(novelId, chapterId, beatId); // Generates the prompt
+            //    const promptText = document.getElementById("promptTextarea").value; // Gets generated prompt
+            //    copyToClipboard(promptText, buttonElement); // Copies it
+            //    closePromptModal(); // Optionally close modal after copy
+            // }
 
-              const chapterIndex = novel.chapters.findIndex(
-                (ch) => ch.id === chapterId
-              );
-              const beatIndex = chapter.sceneBeats.findIndex((b) => b.id === beatId);
-
-              // Build story so far section
-              let storySoFar = "";
-
-              // Add previous chapters' summaries (if they exist)
-              for (let i = 0; i < chapterIndex; i++) {
-                const prevChapter = novel.chapters[i];
-                if (prevChapter.summary) {
-                  storySoFar += `Summary of Chapter ${i + 1}: ${
-                    prevChapter.title || "Untitled"
-                  }\n${prevChapter.summary}\n\n`;
-                } else {
-                  // Fallback: Use generated text of previous chapter beats if no summary
-                  const prevChapterText = prevChapter.sceneBeats
-                    .map((b) => b.generatedText || "") // Prioritize generated text
-                    .filter(Boolean) // Remove empty strings
-                    .join("\n");
-                  if (prevChapterText) {
-                    storySoFar += `Content from Chapter ${i + 1}: ${
-                      prevChapter.title || "Untitled"
-                    }\n${prevChapterText}\n\n`;
-                  }
-                }
-              }
-
-              // Add current chapter's previous *generated* beats' text
-              // Important: Use the AI *output* from previous beats as context
-              for (let i = 0; i < beatIndex; i++) {
-                const prevBeat = chapter.sceneBeats[i];
-                if (prevBeat.generatedText) {
-                  // Only include if there's generated text
-                  storySoFar += prevBeat.generatedText + "\n\n"; // Double newline between beats
-                }
-              }
-              storySoFar = storySoFar.trim(); // Remove trailing newlines
-
-              // Get the template
-              const template = getPromptTemplate();
-
-              // Prepare the instructions (current beat's text)
-              const instructionsText = beat.text || "";
-
-              // Replace placeholders
-              let prompt = template.replace(
-                "{storySoFar}",
-                storySoFar || "This is the beginning of the story."
-              ); // Add fallback if storySoFar is empty
-              prompt = prompt.replace("{instructions}", instructionsText);
-
-              copyToClipboard(prompt.trim(), buttonElement);
-            }
 
             // --- Import / Export ---
 
@@ -1344,6 +1368,10 @@
               if (!novel) return;
 
               let markdown = `# ${novel.title}\n\n`;
+
+              // Export Template first (optional placement, but good to have)
+              markdown += `### Template\n\n`;
+              markdown += `${getEffectiveTemplate(novel)}\n\n`; // Export effective template
 
               novel.chapters.forEach((chapter, chapterIndex) => {
                 markdown += `## ${chapter.title}\n\n`;
@@ -1356,17 +1384,11 @@
                 chapter.sceneBeats.forEach((beat, beatIndex) => {
                   // Consistent numbering based on order
                   markdown += `#### Beat ${beatIndex + 1}\n\n`;
-                  markdown += `**Scene Description:**\n${beat.text || ""}\n\n`;
-                  if (beat.generatedText) {
-                    markdown += `**Generated Content:**\n${beat.generatedText}\n\n`;
-                  } else {
-                    markdown += `**Generated Content:**\n\n\n`; // Ensure structure is maintained even if empty
-                  }
+                  markdown += `**Scene Description:**\n${beat.text || ""}\n\n`; // Ensure newline even if empty
+                  markdown += `**Generated Content:**\n${beat.generatedText || ""}\n\n`; // Ensure newline even if empty
                 });
-                markdown += "\n"; // Add extra newline after last beat of chapter
+                // markdown += "\n"; // Removed extra newline after last beat
               });
-
-              markdown += `### Template\n\n${novel.template || DEFAULT_PROMPT_TEMPLATE}\n\n`;
 
               copyToClipboard(markdown.trim(), buttonElement);
             }
@@ -1382,7 +1404,7 @@
             }
 
             function importNovel() {
-              const text = document.getElementById("importText").value.trim();
+              const text = document.getElementById("importText").value; // Don't trim yet, preserve newlines
               if (!text) {
                 alert("Please paste the exported novel markdown content first.");
                 return;
@@ -1392,89 +1414,107 @@
                 const novel = {
                   id: generateId(),
                   title: "Imported Novel", // Default title
+                  template: null, // Initialize template
                   chapters: [],
                 };
 
-                const lines = text.split("\n");
+                const lines = text.split('\n');
                 let currentChapter = null;
                 let currentBeat = null;
-                let readingMode = null; // null | 'summary' | 'description' | 'generated'
+                let readingMode = null; // null | 'summary' | 'description' | 'generated' | 'template'
+                let accumulatingText = ""; // Buffer for multi-line content
 
                 lines.forEach((line) => {
                   const trimmedLine = line.trim();
 
+                  // Check for section headers FIRST
                   if (trimmedLine.startsWith("# ")) {
-                    novel.title = trimmedLine.substring(2).trim();
+                      finishAccumulatingText(); // Finish previous section
+                      novel.title = trimmedLine.substring(2).trim();
+                      readingMode = null;
                   } else if (trimmedLine.startsWith("## ")) {
-                    currentChapter = {
-                      id: generateId(),
-                      title: trimmedLine.substring(3).trim(),
-                      summary: "",
-                      sceneBeats: [],
-                    };
-                    novel.chapters.push(currentChapter);
-                    currentBeat = null; // Reset beat context
-                    readingMode = null;
+                      finishAccumulatingText();
+                      currentChapter = {
+                          id: generateId(),
+                          title: trimmedLine.substring(3).trim(),
+                          summary: "",
+                          sceneBeats: [],
+                      };
+                      novel.chapters.push(currentChapter);
+                      currentBeat = null;
+                      readingMode = null;
+                  } else if (trimmedLine === "### Template") {
+                      finishAccumulatingText();
+                      readingMode = 'template';
                   } else if (trimmedLine === "### Summary" && currentChapter) {
-                    readingMode = "summary";
+                      finishAccumulatingText();
+                      readingMode = 'summary';
                   } else if (trimmedLine === "### Scene Beats" && currentChapter) {
-                    readingMode = null; // End summary reading if any
+                      finishAccumulatingText();
+                      readingMode = null; // End summary/template reading
                   } else if (trimmedLine.startsWith("#### Beat") && currentChapter) {
-                    currentBeat = {
-                      id: generateId(),
-                      text: "",
-                      generatedText: "",
-                    };
-                    currentChapter.sceneBeats.push(currentBeat);
-                    readingMode = null; // End previous reading mode
-                  } else if (
-                    trimmedLine === "**Scene Description:**" &&
-                    currentBeat
-                  ) {
-                    readingMode = "description";
-                    currentBeat.text = ""; // Initialize/clear
-                  } else if (
-                    trimmedLine === "**Generated Content:**" &&
-                    currentBeat
-                  ) {
-                    readingMode = "generated";
-                    currentBeat.generatedText = ""; // Initialize/clear
-                  } else if (currentChapter) {
-                    // Append line to the correct field based on readingMode
-                    if (readingMode === "summary") {
-                      // Append with newline if summary already has content
-                      currentChapter.summary +=
-                        (currentChapter.summary ? "\n" : "") + line;
-                    } else if (readingMode === "description" && currentBeat) {
-                      currentBeat.text += (currentBeat.text ? "\n" : "") + line;
-                    } else if (readingMode === "generated" && currentBeat) {
-                      currentBeat.generatedText +=
-                        (currentBeat.generatedText ? "\n" : "") + line;
-                    }
+                      finishAccumulatingText();
+                      currentBeat = {
+                          id: generateId(),
+                          text: "",
+                          generatedText: "",
+                      };
+                      currentChapter.sceneBeats.push(currentBeat);
+                      readingMode = null;
+                  } else if (trimmedLine === "**Scene Description:**" && currentBeat) {
+                      finishAccumulatingText();
+                      readingMode = 'description';
+                  } else if (trimmedLine === "**Generated Content:**" && currentBeat) {
+                      finishAccumulatingText();
+                      readingMode = 'generated';
+                  } else {
+                      // If not a header, it's content belonging to the current readingMode
+                      accumulatingText += line + '\n';
                   }
                 });
 
-                // Trim whitespace from imported fields
-                novel.chapters.forEach((ch) => {
-                  ch.summary = ch.summary.trim();
-                  ch.sceneBeats.forEach((b) => {
-                    b.text = b.text.trim();
-                    b.generatedText = b.generatedText.trim();
-                  });
-                });
+                // Finish the last section after the loop
+                finishAccumulatingText();
+
+                // Helper to assign accumulated text to the correct field
+                function finishAccumulatingText() {
+                    const content = accumulatingText.trim(); // Trim final content
+                    if (readingMode === 'template') {
+                        // Store template if it's not the default, otherwise store null
+                         novel.template = (content && content !== DEFAULT_PROMPT_TEMPLATE) ? content : null;
+                    } else if (readingMode === 'summary' && currentChapter) {
+                        currentChapter.summary = content;
+                    } else if (readingMode === 'description' && currentBeat) {
+                        currentBeat.text = content;
+                    } else if (readingMode === 'generated' && currentBeat) {
+                        currentBeat.generatedText = content;
+                    }
+                    accumulatingText = ""; // Reset buffer
+                }
+
+                // Basic validation
+                if (!novel.title || novel.title === "Imported Novel") {
+                    console.warn("Imported novel might be missing title.");
+                }
+                if (novel.chapters.length === 0 && !novel.template) {
+                   // Check if *anything* useful was parsed. The template check is important.
+                    console.warn("Imported text didn't seem to contain chapter or template data.");
+                    // Don't throw error yet, maybe user pasted something else
+                }
 
                 novels.push(novel);
                 saveNovels();
                 toggleImportArea(); // Close the import area
-                showNovelList(); // Refresh the list
+                renderNovelList(); // Refresh the list
                 alert(`Novel "${novel.title}" imported successfully!`);
               } catch (e) {
                 console.error("Import error:", e);
                 alert(
-                  "Error importing novel. Please check the format. It should be the Markdown exported from this tool."
+                  "Error importing novel. Please check the format. It should be the Markdown exported from this tool.\n\n" + e.message
                 );
               }
             }
+
 
             // --- Collapsible Summary State Management ---
 
@@ -1482,9 +1522,12 @@
 
             function getChapterSummaryStates() {
               try {
-                return JSON.parse(localStorage.getItem(LS_SUMMARY_STATE_KEY) || "{}");
+                // Ensure it returns an object
+                const states = JSON.parse(localStorage.getItem(LS_SUMMARY_STATE_KEY) || "{}");
+                return typeof states === 'object' && states !== null ? states : {};
               } catch (e) {
                 console.error("Error reading summary states:", e);
+                localStorage.removeItem(LS_SUMMARY_STATE_KEY); // Clear potentially corrupted data
                 return {}; // Return empty object on error
               }
             }
@@ -1512,98 +1555,23 @@
               }
             }
 
-            function initializeCollapsibleSummaries() {
-              // Get stored visibility states
-              const storedStates = JSON.parse(
-                localStorage.getItem("chapterSummaryStates") || "{}"
-              );
-
-              document.querySelectorAll(".summary-section").forEach((section) => {
-                const chapterId = section.id.replace("summary-section-", "");
-                if (storedStates[chapterId] === false) {
-                  section.classList.remove("collapsed");
-                  const indicator = section.previousElementSibling.querySelector(
-                    ".collapse-indicator"
-                  );
-                  if (indicator) indicator.style.transform = "";
-                } else {
-                  section.classList.add("collapsed");
-                }
-              });
-            }
-
-            // Initialize summaries whenever content is added
-            function addChapter() {
-              const novel = getNovelById(currentNovelId);
-              if (!novel) return;
-
-              const newChapter = {
-                id: generateId(),
-                title: `Chapter ${novel.chapters.length + 1}`,
-                sceneBeats: [],
-                summary: "",
-              };
-              novel.chapters.push(newChapter);
-              saveNovels();
-              renderNovelEditor();
-              updateChapterFilter(); // Update filter after adding a chapter
-            }
-
-            function addSceneBeat(novelId, chapterId) {
-              const novel = getNovelById(novelId);
-              const chapter = getChapterById(novel, chapterId);
-              if (!chapter) return;
-
-              // Find the specific chapter element to get the text from the correct input
-              const chapterElement = document.querySelector(
-                `.chapter[data-chapter-id="${chapterId}"]`
-              );
-              if (!chapterElement) return; // Should not happen normally
-              const newBeatTextArea = chapterElement.querySelector(".new-beat-text");
-              const text = newBeatTextArea.value.trim();
-
-              if (!text) {
-                alert("Please enter some text for the scene beat.");
-                return;
-              }
-
-              const newBeat = {
-                id: generateId(),
-                text: text,
-                generatedText: "",
-              };
-              chapter.sceneBeats.push(newBeat);
-              saveNovels();
-              newBeatTextArea.value = ""; // Clear the input field
-
-              // Re-render just the scene beats for this chapter for efficiency
-              const beatsContainer = chapterElement.querySelector(
-                ".scene-beats-container"
-              );
-              renderSceneBeats(novelId, chapterId, beatsContainer);
-              newBeatTextArea.focus(); // Focus input for quick next entry
-
-              // Ensure summaries are properly initialized after adding content
-              initializeCollapsibleSummaries();
-            }
+            // This function isn't strictly needed anymore as state is applied during renderNovelEditor
+            // function initializeCollapsibleSummaries() { }
 
             function toggleChapterSummary(chapterId) {
-              const summarySection = document.getElementById(
-                `summary-section-${chapterId}`
-              );
-              const indicator = summarySection?.previousElementSibling?.querySelector(
-                ".collapse-indicator"
-              ); // Find indicator safely
+              const summarySection = document.getElementById(`summary-section-${chapterId}`);
+              const indicator = summarySection?.previousElementSibling?.querySelector(".collapse-indicator"); // Find indicator safely
 
               if (summarySection && indicator) {
+                const isCurrentlyCollapsed = summarySection.classList.contains("collapsed");
                 summarySection.classList.toggle("collapsed");
-                const isCollapsed = summarySection.classList.contains("collapsed");
+                const isNowCollapsed = !isCurrentlyCollapsed; // State after toggle
 
                 // Update arrow direction visually
-                indicator.style.transform = isCollapsed ? "rotate(-90deg)" : "";
+                indicator.style.transform = isNowCollapsed ? "rotate(-90deg)" : "";
 
                 // Save the state to localStorage
-                saveChapterSummaryState(chapterId, isCollapsed);
+                saveChapterSummaryState(chapterId, isNowCollapsed);
               } else {
                 console.warn(
                   `Could not find summary section or indicator for chapter ${chapterId}`
