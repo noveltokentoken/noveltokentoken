@@ -3,7 +3,8 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>AI-Assisted Novel Editor</title>
+    <title>React AI-Assisted Novel Editor</title>
+    <!-- Include existing CSS -->
     <style>
       /* --- Existing styles --- */
       body {
@@ -71,9 +72,8 @@
         border-radius: 8px;
       }
 
-      #novelListView,
-      #novelEditorView,
-      #settingsView {
+      /* Views */
+      .view {
         margin-top: 20px;
       }
 
@@ -124,10 +124,12 @@
         padding: 5px;
         flex-grow: 1; /* Allow title to take available space */
         margin-right: 10px; /* Space between title and buttons */
+        border: 1px solid transparent; /* Add border for focus state consistency */
       }
       .chapter-title:focus {
         outline: 1px solid #5c67f2;
         background-color: #f0f0ff;
+        border: 1px solid #ccc;
       }
 
       .chapter-controls button,
@@ -144,7 +146,7 @@
       }
 
       textarea {
-        width: 98%;
+        width: 98%; /* Adjusted for potential scrollbars */
         min-height: 60px;
         margin-top: 5px;
         margin-bottom: 5px;
@@ -154,7 +156,7 @@
         font-family: inherit;
         font-size: 1em;
         resize: vertical; /* Allow vertical resize */
-        box-sizing: border-box; /* Include padding and border in the element's total width and height */
+        box-sizing: border-box; /* Include padding and border */
       }
 
       .beat-text-area {
@@ -164,7 +166,7 @@
       .generated-text-area,
       .summary-text-area {
         min-height: 80px;
-        background-color: #e8f0fe; /* Light blue background for generated content */
+        background-color: #e8f0fe; /* Light blue background */
       }
 
       .beat-controls {
@@ -203,6 +205,13 @@
         padding: 8px;
         border: 1px solid #ccc;
         border-radius: 4px;
+        margin-right: 5px; /* Add some spacing */
+      }
+
+      .novel-title-edit input[type="text"] {
+        font-size: 1.5em;
+        margin-bottom: 10px;
+        width: calc(100% - 20px); /* Adjust width */
       }
 
       .import-export-area {
@@ -213,34 +222,18 @@
       }
 
       .import-area {
-        display: none;
+        /* Display handled by React state */
         margin-top: 10px;
-      }
-
-      .import-area.show {
-        display: block;
       }
 
       .import-area textarea {
         width: 100%;
         min-height: 200px;
         margin: 10px 0;
-        box-sizing: border-box; /* Added for consistency */
+        box-sizing: border-box;
       }
 
-      /* --- New styles for Settings --- */
-      #settingsView {
-        border: 1px solid #ddd;
-        padding: 20px;
-        background-color: #f9f9f9;
-        border-radius: 5px;
-      }
-      #promptTemplateTextarea {
-        width: 98%;
-        min-height: 250px; /* Make it taller for template editing */
-        font-family: monospace; /* Often better for template editing */
-        font-size: 0.9em;
-      }
+      /* --- Settings Styles (No separate view now) --- */
       .template-help {
         font-size: 0.9em;
         color: #555;
@@ -254,7 +247,7 @@
 
       /* --- Modal Dialog Styles --- */
       .modal-overlay {
-        display: none;
+        /* Display handled by React state */
         position: fixed;
         top: 0;
         left: 0;
@@ -262,6 +255,7 @@
         height: 100%;
         background-color: rgba(0, 0, 0, 0.5);
         z-index: 1000;
+        display: flex; /* Use flex for centering */
         justify-content: center;
         align-items: center;
       }
@@ -299,6 +293,7 @@
         color: #777;
         padding: 0;
         margin: 0;
+        line-height: 1; /* Ensure tight fit */
       }
 
       .modal-body {
@@ -314,6 +309,10 @@
         justify-content: flex-end;
       }
 
+      .modal-footer button {
+        margin-left: 10px;
+      }
+
       .prompt-textarea {
         width: 100%;
         min-height: 300px;
@@ -323,13 +322,14 @@
         border-radius: 4px;
         margin-bottom: 10px;
         resize: vertical;
-        box-sizing: border-box; /* Added for consistency */
+        box-sizing: border-box;
       }
 
-      /* --- New styles for collapsible summary --- */
+      /* --- Collapsible summary styles --- */
       .summary-section {
         transition: max-height 0.3s ease-out;
         overflow: hidden;
+        max-height: 500px; /* Default expanded height large enough */
       }
 
       .summary-section.collapsed {
@@ -338,9 +338,10 @@
 
       .summary-header {
         display: flex;
-        align-items: center; /* Changed from start for better alignment */
+        align-items: center;
         cursor: pointer;
-        gap: 5px; /* Add some space between arrow and text */
+        gap: 5px;
+        margin-bottom: 10px; /* Add space below header */
       }
 
       .summary-header h4 {
@@ -348,120 +349,57 @@
       }
 
       .collapse-indicator {
-        font-size: 18px; /* Adjust as needed */
-        line-height: 1; /* Prevent extra space */
+        font-size: 18px;
+        line-height: 1;
         transition: transform 0.3s;
-        display: inline-block; /* Needed for transform */
+        display: inline-block;
       }
 
-      .collapsed .collapse-indicator {
+      .summary-header.collapsed .collapse-indicator {
         transform: rotate(-90deg);
+      }
+
+      /* Chapter Filter */
+      .chapter-filter {
+        margin: 10px 0;
+      }
+
+      /* Add Beat Textarea Focus Style */
+      .add-beat-area textarea:focus {
+        outline: 1px solid #5c67f2;
+      }
+
+      /* Prevent layout shift from feedback */
+      .feedback-container {
+        display: inline-block;
+        min-width: 60px; /* Adjust as needed */
+        text-align: left;
       }
     </style>
   </head>
   <body>
-    <div class="container">
-      <h1>AI-Assisted Novel Editor</h1>
+    <!-- Root element for React -->
+    <div id="root"></div>
 
-      <!-- Novel List View -->
-      <div id="novelListView">
-        <h2>Novels</h2>
-        <ul id="novelList">
-          <!-- Novel list items will be injected here -->
-        </ul>
-        <div>
-          <input type="text" id="newNovelTitle" placeholder="New Novel Title" />
-          <button onclick="createNovel()">Create New Novel</button>
-          <button onclick="toggleImportArea()">Import Novel</button>
-        </div>
-        <div class="import-area">
-          <textarea
-            id="importText"
-            placeholder="Paste exported novel markdown here..."
-          ></textarea>
-          <button onclick="importNovel()">Import</button>
-          <button class="secondary-btn" onclick="toggleImportArea()">Cancel</button>
-        </div>
-      </div>
+    <!-- React and Babel CDNs -->
+    <script
+      src="https://unpkg.com/react@18/umd/react.development.js"
+      crossorigin
+    ></script>
+    <script
+      src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"
+      crossorigin
+    ></script>
+    <script src="https://unpkg.com/babel-standalone@6/babel.min.js"></script>
 
-      <!-- Old Settings View (Placeholder) - Can be removed if Template Editor Modal is sufficient -->
-      <div id="settingsView" style="display: none">
-        <h2>Settings</h2>
-        <p>Settings content will go here. Use the 'Edit Templates' button in the editor view.</p>
-        <button onclick="showNovelList()">← Back to Novel List</button>
-      </div>
+    <!-- React Application Code (using Babel) -->
+    <script type="text/babel">
+      const { useState, useEffect, useCallback, useMemo } = React;
 
-      <!-- Novel Editor View -->
-      <div id="novelEditorView" style="display: none">
-        <button onclick="showNovelList()">← Back to Novel List</button>
-        <div class="novel-title-edit">
-          <input
-            type="text"
-            id="editNovelTitle"
-            oninput="updateNovelTitle(this.value)"
-          />
-        </div>
-        <div class="import-export-area">
-          <button onclick="exportNovel(this)">Export Novel</button>
-          <button onclick="showTemplateEditor()">Edit Continue Prompt Template</button>
-          <span class="feedback">Copied!</span>
-        </div>
-        <div class="chapter-filter">
-          <label for="chapterFilter">Show chapter: </label>
-          <select id="chapterFilter" onchange="filterChapters(this.value)">
-            <option value="all">All Chapters</option>
-            <!-- Chapter options will be injected here -->
-          </select>
-        </div>
-        <button class="delete-btn" onclick="deleteCurrentNovel()">
-          Delete This Novel
-        </button>
-        <hr />
-
-        <div id="chaptersContainer">
-          <!-- Chapters will be injected here -->
-        </div>
-
-        <button onclick="addChapter()">+ Add New Chapter</button>
-      </div>
-
-      <!-- Prompt Modal Dialog -->
-      <div class="modal-overlay" id="promptModal">
-        <div class="modal-dialog">
-          <div class="modal-header">
-            <h3 class="modal-title">Scene Beat Prompt</h3>
-            <button class="modal-close" onclick="closePromptModal()">
-              ×
-            </button>
-          </div>
-          <div class="modal-body">
-            <textarea
-              id="promptTextarea"
-              class="prompt-textarea"
-              readonly
-            ></textarea>
-          </div>
-          <div class="modal-footer">
-            <button onclick="copyPromptFromModal()">Copy to Clipboard</button>
-            <button class="secondary-btn" onclick="closePromptModal()">
-              Close
-            </button>
-          </div>
-        </div>
-      </div>
-
-      <!-- Template Editor Modal (dynamically created) -->
-
-    </div>
-
-    <script>
-            const LS_KEY = "novels";
-            const LS_TEMPLATE_KEY = "promptTemplate"; // Legacy key for default, now templates are stored per-novel
-            let novels = [];
-            let currentNovelId = null;
-
-            // --- Default Prompt Template ---
-            const DEFAULT_PROMPT_TEMPLATE = `The story so far:
+      // --- Constants ---
+      const LS_KEY = "novels_react"; // Use a different key for React version
+      const LS_SUMMARY_STATE_KEY = "chapterSummaryStates_react";
+      const DEFAULT_PROMPT_TEMPLATE = `The story so far:
 {storySoFar}
 
 You are an expert fiction writer. Continue the story and write about 400 words for the following instructions:
@@ -478,1113 +416,1558 @@ STOP EARLY if the continuation contains what was required in the instructions. Y
 - Write in active voice. Use British, American, Scientific, International, and Commercial English (Basic English) for everything except dialogues. For dialogues, use the language that ordinary people in the 1980x would use.
 - Use sarcasm and dry humor. Make sarcastic jokes in the internal monologue.`;
 
-            // --- Core Data Management ---
+      // --- Helper Functions ---
+      function generateId() {
+        return (
+          Date.now().toString(36) + Math.random().toString(36).substring(2)
+        );
+      }
 
-            function loadNovels() {
-              const data = localStorage.getItem(LS_KEY);
-              try {
-                novels = data ? JSON.parse(data) : [];
-              } catch (e) {
-                console.error("Error loading novels from local storage:", e);
-                novels = []; // Reset if data is corrupted
+      // ****** FIXED HERE ******
+      function getEffectiveTemplate(novel) {
+        // Replace novel?.template with (novel && novel.template)
+        return (novel && novel.template) || DEFAULT_PROMPT_TEMPLATE;
+      }
+      // ****** END FIX ******
+
+      // Simple copy-to-clipboard helper
+      function copyToClipboard(text) {
+        if (!text) return Promise.reject(new Error("Nothing to copy"));
+        return navigator.clipboard.writeText(text);
+      }
+
+      // --- Modal Component ---
+      function Modal({ title, children, footer, onClose }) {
+        return (
+          <div className="modal-overlay">
+            <div className="modal-dialog">
+              <div className="modal-header">
+                <h3 className="modal-title">{title}</h3>
+                <button className="modal-close" onClick={onClose}>
+                  ×
+                </button>
+              </div>
+              <div className="modal-body">{children}</div>
+              <div className="modal-footer">{footer}</div>
+            </div>
+          </div>
+        );
+      }
+
+      // --- Feedback Component ---
+      function FeedbackMessage({ show, message = "Copied!" }) {
+        return (
+          <span className={`feedback ${show ? "show" : ""}`}>{message}</span>
+        );
+      }
+
+      // --- SceneBeat Component ---
+      function SceneBeat({
+        novelId,
+        chapterId,
+        beat,
+        beatIndex,
+        totalBeats,
+        onUpdateBeatText,
+        onUpdateGeneratedText,
+        onDeleteBeat,
+        onMoveBeat,
+        onShowPrompt,
+      }) {
+        return (
+          <div className="scene-beat">
+            <p
+              style={{ marginBottom: "2px", fontSize: "0.9em", color: "#555" }}
+            >
+              <strong>Scene Beat Instruction:</strong>
+            </p>
+            <textarea
+              className="beat-text-area"
+              placeholder="Scene beat description / instruction..."
+              value={beat.text || ""}
+              onChange={(e) =>
+                onUpdateBeatText(novelId, chapterId, beat.id, e.target.value)
               }
-              // Ensure basic structure integrity and add novel-specific template field if missing
-              novels.forEach((novel) => {
-                novel.template = novel.template || null; // Add template field if missing, default to null (will fallback to global)
-                novel.chapters = novel.chapters || [];
+            />
+
+            <div className="beat-controls">
+              <button
+                className="move-btn"
+                onClick={() => onMoveBeat(novelId, chapterId, beat.id, -1)}
+                disabled={beatIndex === 0}
+              >
+                ↑
+              </button>
+              <button
+                className="move-btn"
+                onClick={() => onMoveBeat(novelId, chapterId, beat.id, 1)}
+                disabled={beatIndex === totalBeats - 1}
+              >
+                ↓
+              </button>
+              <button onClick={() => onShowPrompt(novelId, chapterId, beat.id)}>
+                Show Prompt
+              </button>
+              <button
+                className="delete-btn"
+                onClick={() => onDeleteBeat(novelId, chapterId, beat.id)}
+              >
+                Delete Beat
+              </button>
+            </div>
+
+            <p
+              style={{
+                marginTop: "10px",
+                marginBottom: "2px",
+                fontSize: "0.9em",
+                color: "#555",
+              }}
+            >
+              <strong>AI Generated Content:</strong>
+            </p>
+            <textarea
+              className="generated-text-area"
+              placeholder="Paste AI generated content here..."
+              value={beat.generatedText || ""}
+              onChange={(e) =>
+                onUpdateGeneratedText(
+                  novelId,
+                  chapterId,
+                  beat.id,
+                  e.target.value
+                )
+              }
+            />
+          </div>
+        );
+      }
+
+      // --- ChapterSummary Component ---
+      function ChapterSummary({
+        novelId,
+        chapter,
+        isCollapsed,
+        onToggleCollapse,
+        onUpdateSummary,
+        onCopySummaryPrompt,
+      }) {
+        const [copyFeedback, setCopyFeedback] = useState(false);
+
+        const handleCopyPrompt = () => {
+          onCopySummaryPrompt(novelId, chapter.id)
+            .then(() => {
+              setCopyFeedback(true);
+              setTimeout(() => setCopyFeedback(false), 1500);
+            })
+            .catch((err) => {
+              console.error("Failed to copy summary prompt:", err);
+              alert("Failed to copy. See console for details.");
+            });
+        };
+
+        return (
+          <div>
+            <div
+              className={`summary-header ${isCollapsed ? "collapsed" : ""}`}
+              onClick={() => onToggleCollapse(chapter.id)}
+            >
+              <span className="collapse-indicator">▼</span>
+              <h4>Chapter Summary</h4>
+            </div>
+            <div
+              className={`summary-section ${isCollapsed ? "collapsed" : ""}`}
+            >
+              <button onClick={handleCopyPrompt}>Copy Summary Prompt</button>
+              <div className="feedback-container">
+                <FeedbackMessage show={copyFeedback} />
+              </div>
+              <textarea
+                className="summary-text-area"
+                placeholder="Paste chapter summary generated by AI here..."
+                value={chapter.summary || ""}
+                onChange={(e) =>
+                  onUpdateSummary(novelId, chapter.id, e.target.value)
+                }
+              />
+            </div>
+          </div>
+        );
+      }
+
+      // --- Chapter Component ---
+      function Chapter({
+        novelId,
+        chapter,
+        chapterIndex,
+        totalChapters,
+        onUpdateChapterTitle,
+        onDeleteChapter,
+        onMoveChapter,
+        onAddBeat,
+        onUpdateBeatText,
+        onUpdateGeneratedText,
+        onDeleteBeat,
+        onMoveBeat,
+        onShowPrompt,
+        isSummaryCollapsed,
+        onToggleSummaryCollapse,
+        onUpdateChapterSummary,
+        onCopySummaryPrompt,
+      }) {
+        const [newBeatText, setNewBeatText] = useState("");
+
+        const handleAddBeat = () => {
+          if (!newBeatText.trim()) {
+            alert("Please enter some text for the scene beat instruction.");
+            return;
+          }
+          onAddBeat(novelId, chapter.id, newBeatText);
+          setNewBeatText(""); // Clear input after adding
+        };
+
+        return (
+          <div className="chapter">
+            <div className="chapter-header">
+              <input
+                type="text"
+                className="chapter-title"
+                value={chapter.title || ""}
+                onChange={(e) =>
+                  onUpdateChapterTitle(novelId, chapter.id, e.target.value)
+                }
+                placeholder="Chapter Title"
+              />
+              <div className="chapter-controls">
+                <button
+                  className="move-btn"
+                  onClick={() => onMoveChapter(novelId, chapter.id, -1)}
+                  disabled={chapterIndex === 0}
+                >
+                  ↑
+                </button>
+                <button
+                  className="move-btn"
+                  onClick={() => onMoveChapter(novelId, chapter.id, 1)}
+                  disabled={chapterIndex === totalChapters - 1}
+                >
+                  ↓
+                </button>
+                <button
+                  className="delete-btn"
+                  onClick={() => onDeleteChapter(novelId, chapter.id)}
+                >
+                  Delete Chapter
+                </button>
+              </div>
+            </div>
+
+            <div className="scene-beats-container">
+              {chapter.sceneBeats.length === 0 ? (
+                <p style={{ color: "#888", fontStyle: "italic" }}>
+                  No scene beats yet.
+                </p>
+              ) : (
+                chapter.sceneBeats.map((beat, index) => (
+                  <SceneBeat
+                    key={beat.id}
+                    novelId={novelId}
+                    chapterId={chapter.id}
+                    beat={beat}
+                    beatIndex={index}
+                    totalBeats={chapter.sceneBeats.length}
+                    onUpdateBeatText={onUpdateBeatText}
+                    onUpdateGeneratedText={onUpdateGeneratedText}
+                    onDeleteBeat={onDeleteBeat}
+                    onMoveBeat={onMoveBeat}
+                    onShowPrompt={onShowPrompt}
+                  />
+                ))
+              )}
+            </div>
+
+            <div className="add-beat-area">
+              <textarea
+                className="new-beat-text"
+                placeholder="Add new scene beat instruction..."
+                value={newBeatText}
+                onChange={(e) => setNewBeatText(e.target.value)}
+              />
+              <button onClick={handleAddBeat}>+ Add Beat</button>
+            </div>
+
+            <hr style={{ margin: "15px 0" }} />
+
+            <ChapterSummary
+              novelId={novelId}
+              chapter={chapter}
+              isCollapsed={isSummaryCollapsed}
+              onToggleCollapse={onToggleSummaryCollapse}
+              onUpdateSummary={onUpdateChapterSummary}
+              onCopySummaryPrompt={onCopySummaryPrompt}
+            />
+          </div>
+        );
+      }
+
+      // --- NovelEditorView Component ---
+      function NovelEditorView({
+        novel,
+        onBack,
+        onUpdateNovel,
+        onDeleteNovel,
+        // Chapter Actions
+        onAddChapter,
+        onDeleteChapter,
+        onMoveChapter,
+        onUpdateChapterTitle,
+        // Beat Actions
+        onAddBeat,
+        onDeleteBeat,
+        onMoveBeat,
+        onUpdateBeatText,
+        onUpdateGeneratedText,
+        // Summary Actions
+        onUpdateChapterSummary,
+        // Other
+        onExportNovel,
+        onShowPrompt,
+        onShowTemplateEditor,
+        summaryCollapseStates,
+        onToggleSummaryCollapse,
+        onCopySummaryPrompt,
+      }) {
+        const [exportFeedback, setExportFeedback] = useState(false);
+        const [chapterFilter, setChapterFilter] = useState("all");
+
+        const handleExport = () => {
+          onExportNovel(novel.id)
+            .then(() => {
+              setExportFeedback(true);
+              setTimeout(() => setExportFeedback(false), 1500);
+            })
+            .catch((err) => {
+              console.error("Export failed:", err);
+              alert("Export failed. See console for details.");
+            });
+        };
+
+        const filteredChapters = useMemo(() => {
+          if (chapterFilter === "all") {
+            return novel.chapters;
+          }
+          return novel.chapters.filter((ch) => ch.id === chapterFilter);
+        }, [novel.chapters, chapterFilter]);
+
+        return (
+          <div className="view" id="novelEditorView">
+            <button onClick={onBack}>← Back to Novel List</button>
+            <div className="novel-title-edit">
+              <input
+                type="text"
+                id="editNovelTitle"
+                value={novel.title || ""}
+                onChange={(e) =>
+                  onUpdateNovel(novel.id, { title: e.target.value })
+                }
+              />
+            </div>
+            <div className="import-export-area">
+              <button onClick={handleExport}>Export Novel</button>
+              <button onClick={() => onShowTemplateEditor(novel.id)}>
+                Edit Continue Prompt Template
+              </button>
+              <div className="feedback-container">
+                <FeedbackMessage show={exportFeedback} />
+              </div>
+            </div>
+            <div className="chapter-filter">
+              <label htmlFor="chapterFilter">Show chapter: </label>
+              <select
+                id="chapterFilter"
+                value={chapterFilter}
+                onChange={(e) => setChapterFilter(e.target.value)}
+              >
+                <option value="all">All Chapters</option>
+                {novel.chapters.map((ch, index) => (
+                  <option key={ch.id} value={ch.id}>
+                    {ch.title || `Chapter ${index + 1}`}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <button
+              className="delete-btn"
+              onClick={() => onDeleteNovel(novel.id)}
+            >
+              Delete This Novel
+            </button>
+            <hr />
+
+            <div id="chaptersContainer">
+              {filteredChapters.length === 0 &&
+                chapterFilter !== "all" &&
+                novel.chapters.length > 0 && (
+                  <p style={{ fontStyle: "italic", color: "#888" }}>
+                    Chapter not found. Showing all chapters. Select "All
+                    Chapters" above.
+                  </p>
+                )}
+              {filteredChapters.length > 0
+                ? filteredChapters.map((chapter) => {
+                    // Find the original index for move button disabling
+                    const originalIndex = novel.chapters.findIndex(
+                      (ch) => ch.id === chapter.id
+                    );
+                    return (
+                      <Chapter
+                        key={chapter.id}
+                        novelId={novel.id}
+                        chapter={chapter}
+                        chapterIndex={originalIndex} // Use original index for move logic
+                        totalChapters={novel.chapters.length}
+                        onUpdateChapterTitle={onUpdateChapterTitle}
+                        onDeleteChapter={onDeleteChapter}
+                        onMoveChapter={onMoveChapter}
+                        onAddBeat={onAddBeat}
+                        onUpdateBeatText={onUpdateBeatText}
+                        onUpdateGeneratedText={onUpdateGeneratedText}
+                        onDeleteBeat={onDeleteBeat}
+                        onMoveBeat={onMoveBeat}
+                        onShowPrompt={onShowPrompt}
+                        // ****** FIXED HERE ******
+                        isSummaryCollapsed={
+                          // Replace summaryCollapseStates[chapter.id] ?? true
+                          typeof summaryCollapseStates[chapter.id] !==
+                            "undefined" &&
+                          summaryCollapseStates[chapter.id] !== null
+                            ? summaryCollapseStates[chapter.id]
+                            : true // Default collapsed
+                        }
+                        // ****** END FIX ******
+                        onToggleSummaryCollapse={onToggleSummaryCollapse}
+                        onUpdateChapterSummary={onUpdateChapterSummary}
+                        onCopySummaryPrompt={onCopySummaryPrompt}
+                      />
+                    );
+                  })
+                : chapterFilter === "all" && (
+                    <p>No chapters yet. Click "+ Add New Chapter" below.</p>
+                  )}
+            </div>
+
+            <button onClick={() => onAddChapter(novel.id)}>
+              + Add New Chapter
+            </button>
+          </div>
+        );
+      }
+
+      // --- NovelListView Component ---
+      function NovelListView({
+        novels,
+        onCreateNovel,
+        onOpenNovel,
+        onDeleteNovel,
+        onImportNovel,
+      }) {
+        const [newNovelTitle, setNewNovelTitle] = useState("");
+        const [importVisible, setImportVisible] = useState(false);
+        const [importText, setImportText] = useState("");
+
+        const handleCreate = () => {
+          onCreateNovel(newNovelTitle);
+          setNewNovelTitle(""); // Clear input
+        };
+
+        const handleImport = () => {
+          if (!importText.trim()) {
+            alert("Please paste the exported novel markdown content first.");
+            return;
+          }
+          onImportNovel(importText);
+          setImportText("");
+          setImportVisible(false);
+        };
+
+        const toggleImport = () => {
+          setImportVisible(!importVisible);
+          if (importVisible) {
+            // If closing
+            setImportText("");
+          }
+        };
+
+        const sortedNovels = useMemo(() => {
+          // Ensure novels is always an array before sorting
+          const novelsArray = Array.isArray(novels) ? novels : [];
+          return [...novelsArray].sort((a, b) =>
+            (a.title || "").localeCompare(b.title || "")
+          );
+        }, [novels]);
+
+        return (
+          <div className="view" id="novelListView">
+            <h2>Novels</h2>
+            <ul id="novelList">
+              {sortedNovels.length === 0 ? (
+                <li>No novels found. Create one below or import one.</li>
+              ) : (
+                sortedNovels.map((novel) => (
+                  <li key={novel.id}>
+                    <span
+                      className="novel-item-title"
+                      onClick={() => onOpenNovel(novel.id)}
+                    >
+                      {novel.title || "Untitled Novel"}
+                    </span>
+                    <div>
+                      <button onClick={() => onOpenNovel(novel.id)}>
+                        Open
+                      </button>
+                      <button
+                        className="delete-btn"
+                        onClick={() => onDeleteNovel(novel.id)}
+                      >
+                        Delete
+                      </button>
+                    </div>
+                  </li>
+                ))
+              )}
+            </ul>
+            <div>
+              <input
+                type="text"
+                id="newNovelTitle"
+                placeholder="New Novel Title"
+                value={newNovelTitle}
+                onChange={(e) => setNewNovelTitle(e.target.value)}
+              />
+              <button onClick={handleCreate}>Create New Novel</button>
+              <button onClick={toggleImport}>
+                {importVisible ? "Cancel Import" : "Import Novel"}
+              </button>
+            </div>
+
+            {importVisible && (
+              <div className="import-area show">
+                <textarea
+                  id="importText"
+                  placeholder="Paste exported novel markdown here..."
+                  value={importText}
+                  onChange={(e) => setImportText(e.target.value)}
+                ></textarea>
+                <button onClick={handleImport}>Import</button>
+                <button className="secondary-btn" onClick={toggleImport}>
+                  Cancel
+                </button>
+              </div>
+            )}
+          </div>
+        );
+      }
+
+      // --- Main App Component ---
+      function App() {
+        const [novels, setNovels] = useState([]);
+        const [currentView, setCurrentView] = useState("list"); // 'list' or 'editor'
+        const [currentNovelId, setCurrentNovelId] = useState(null);
+        const [modalContent, setModalContent] = useState(null); // { type: 'prompt'/'template', data: ... }
+        const [summaryCollapseStates, setSummaryCollapseStates] = useState({});
+
+        // --- Load initial data ---
+        useEffect(() => {
+          // Load Novels
+          const storedNovels = localStorage.getItem(LS_KEY);
+          let loadedNovels = [];
+          if (storedNovels) {
+            try {
+              loadedNovels = JSON.parse(storedNovels);
+              // Ensure loadedNovels is an array
+              if (!Array.isArray(loadedNovels)) {
+                console.warn("Loaded novels data is not an array, resetting.");
+                loadedNovels = [];
+              }
+              // Basic validation/migration
+              loadedNovels.forEach((novel) => {
+                // Check if novel is an object
+                if (typeof novel !== "object" || novel === null) return;
+
+                novel.template =
+                  novel.template === undefined ? null : novel.template; // Add template field if missing
+                novel.chapters = Array.isArray(novel.chapters)
+                  ? novel.chapters
+                  : [];
                 novel.chapters.forEach((chapter) => {
-                  chapter.sceneBeats = chapter.sceneBeats || [];
+                  if (typeof chapter !== "object" || chapter === null) return;
+                  chapter.sceneBeats = Array.isArray(chapter.sceneBeats)
+                    ? chapter.sceneBeats
+                    : [];
                   chapter.summary = chapter.summary || "";
                   chapter.sceneBeats.forEach((beat) => {
+                    if (typeof beat !== "object" || beat === null) return;
                     beat.generatedText = beat.generatedText || "";
+                    beat.text = beat.text || ""; // Ensure text field exists
                   });
                 });
               });
+            } catch (e) {
+              console.error("Error parsing novels from local storage:", e);
+              loadedNovels = [];
             }
+          }
+          setNovels(loadedNovels);
 
-            function saveNovels() {
-              try {
-                localStorage.setItem(LS_KEY, JSON.stringify(novels));
-              } catch (e) {
-                console.error("Error saving novels to local storage:", e);
-                alert(
-                  "Error saving data. Local storage might be full or unavailable."
-                );
+          // Load Summary Collapse States
+          const storedStates = localStorage.getItem(LS_SUMMARY_STATE_KEY);
+          try {
+            const loadedStates = JSON.parse(storedStates || "{}");
+            setSummaryCollapseStates(
+              typeof loadedStates === "object" && loadedStates !== null
+                ? loadedStates
+                : {}
+            );
+          } catch (e) {
+            console.error("Error parsing summary states:", e);
+            setSummaryCollapseStates({});
+          }
+        }, []); // Empty dependency array means run only once on mount
+
+        // --- Save data to local storage on change ---
+        useEffect(() => {
+          // Only save if novels is actually an array
+          if (Array.isArray(novels)) {
+            try {
+              localStorage.setItem(LS_KEY, JSON.stringify(novels));
+            } catch (e) {
+              console.error("Error saving novels:", e);
+              alert("Error saving novel data. Local storage might be full.");
+            }
+          }
+        }, [novels]); // Run whenever novels state changes
+
+        useEffect(() => {
+          try {
+            localStorage.setItem(
+              LS_SUMMARY_STATE_KEY,
+              JSON.stringify(summaryCollapseStates)
+            );
+          } catch (e) {
+            console.error("Error saving summary states:", e);
+            // Don't alert for this, less critical
+          }
+        }, [summaryCollapseStates]); // Run whenever collapse states change
+
+        // --- State Update Helper (Immutability!) ---
+        const updateNovels = (updateFn) => {
+          setNovels((prevNovels) => {
+            // Ensure prevNovels is an array before applying the update function
+            const currentNovels = Array.isArray(prevNovels) ? prevNovels : [];
+            return updateFn(currentNovels);
+          });
+        };
+
+        // --- Novel Actions ---
+        const handleCreateNovel = (title) => {
+          const newNovel = {
+            id: generateId(),
+            title: title.trim() || "Untitled Novel",
+            template: null,
+            chapters: [],
+          };
+          updateNovels((prev) => [...prev, newNovel]);
+          setCurrentNovelId(newNovel.id); // Open the new novel
+          setCurrentView("editor");
+        };
+
+        const handleOpenNovel = (id) => {
+          setCurrentNovelId(id);
+          setCurrentView("editor");
+        };
+
+        const handleDeleteNovel = (id) => {
+          const novelToDelete = novels.find((n) => n.id === id);
+          if (!novelToDelete) return;
+          if (
+            confirm(
+              `Are you sure you want to delete the novel "${
+                novelToDelete.title || "Untitled Novel"
+              }"? This action cannot be undone.`
+            )
+          ) {
+            updateNovels((prev) => prev.filter((novel) => novel.id !== id));
+            if (currentNovelId === id) {
+              setCurrentView("list");
+              setCurrentNovelId(null);
+            }
+            // Clean up summary states for deleted novel's chapters (optional but good practice)
+            setSummaryCollapseStates((prevStates) => {
+              const newStates = { ...prevStates };
+              // Check if chapters exist before iterating
+              if (Array.isArray(novelToDelete.chapters)) {
+                novelToDelete.chapters.forEach((ch) => delete newStates[ch.id]);
               }
-            }
-
-            function getNovelById(id) {
-              return novels.find((novel) => novel.id === id);
-            }
-
-            function getChapterById(novel, chapterId) {
-              return novel?.chapters.find((chap) => chap.id === chapterId);
-            }
-
-            function getSceneBeatById(chapter, beatId) {
-              return chapter?.sceneBeats.find((beat) => beat.id === beatId);
-            }
-
-            function generateId() {
-              return Date.now().toString(36) + Math.random().toString(36).substring(2);
-            }
-
-            // --- Prompt Template Management ---
-
-            // Gets the novel-specific template or falls back to the default
-            function getEffectiveTemplate(novel) {
-                return novel?.template || DEFAULT_PROMPT_TEMPLATE;
-            }
-
-            // Used for the modal editor to show the correct content
-            function showTemplateEditor() {
-              const novel = getNovelById(currentNovelId);
-              if (!novel) return;
-
-              // Close existing modal if any
-              const existingModal = document.querySelector('.modal-overlay[data-modal-type="template-editor"]');
-              if (existingModal) existingModal.remove();
-
-              const modal = document.createElement("div");
-              modal.classList.add("modal-overlay");
-              modal.dataset.modalType = "template-editor"; // Add identifier
-              modal.style.display = "flex";
-              modal.innerHTML = `
-                <div class="modal-dialog">
-                  <div class="modal-header">
-                    <h3 class="modal-title">Edit Continue Prompt Template</h3>
-                    <button class="modal-close" onclick="closeTemplateEditor(this)">×</button>
-                  </div>
-                  <div class="modal-body">
-                    <textarea
-                      id="templateTextarea"
-                      class="prompt-textarea"
-                    >${getEffectiveTemplate(novel)}</textarea> <!-- Use effective template -->
-                    <div class="template-help">
-                      <p>Use these placeholders:</p>
-                      <ul>
-                        <li><code>{storySoFar}</code> - Context from previous chapters/beats.</li>
-                        <li><code>{instructions}</code> - The text from the current scene beat description.</li>
-                      </ul>
-                    </div>
-                  </div>
-                  <div class="modal-footer">
-                    <button onclick="saveTemplate('${novel.id}', this)">Save Template</button>
-                    <button class="secondary-btn" onclick="resetTemplateInEditor('${novel.id}')">Reset to Default</button>
-                    <button class="secondary-btn" onclick="closeTemplateEditor(this)">Close</button>
-                  </div>
-                </div>
-              `;
-              document.body.appendChild(modal);
-              // Focus the textarea
-              const textarea = modal.querySelector('#templateTextarea');
-              if (textarea) textarea.focus();
-            }
-
-            function closeTemplateEditor(button) {
-              const modal = button.closest(".modal-overlay");
-              if (modal) modal.remove();
-            }
-
-            function saveTemplate(novelId, button) {
-              const novel = getNovelById(novelId);
-              if (!novel) return;
-
-              const textarea = document.getElementById("templateTextarea");
-              if (textarea) {
-                const newTemplate = textarea.value;
-                // Only save if it's different from the default, otherwise store null
-                novel.template = (newTemplate !== DEFAULT_PROMPT_TEMPLATE) ? newTemplate : null;
-                saveNovels();
-                // Show feedback within the modal
-                const originalText = button.textContent;
-                button.textContent = "Saved!";
-                button.disabled = true;
-                setTimeout(() => {
-                   button.textContent = originalText;
-                   button.disabled = false;
-                }, 1500);
-              }
-            }
-
-            function resetTemplateInEditor(novelId) {
-                 if (confirm("Are you sure you want to reset the template in the editor to the default? This won't save until you click 'Save Template'.")) {
-                    const textarea = document.getElementById("templateTextarea");
-                    if (textarea) {
-                        textarea.value = DEFAULT_PROMPT_TEMPLATE;
-                    }
-                }
-            }
-
-            // --- UI Rendering ---
-
-            function renderNovelList() {
-              const novelListEl = document.getElementById("novelList");
-              novelListEl.innerHTML = ""; // Clear current list
-
-              if (novels.length === 0) {
-                novelListEl.innerHTML =
-                  "<li>No novels found. Create one below or import one.</li>";
-                return;
-              }
-
-              novels.sort((a, b) => (a.title || "").localeCompare(b.title || "")); // Sort novels alphabetically
-
-              novels.forEach((novel) => {
-                const li = document.createElement("li");
-                li.innerHTML = `
-                      <span class="novel-item-title" onclick="openNovel('${
-                        novel.id
-                      }')">${novel.title || "Untitled Novel"}</span>
-                      <div>
-                          <button onclick="openNovel('${novel.id}')">Open</button>
-                          <button class="delete-btn" onclick="deleteNovel('${
-                            novel.id
-                          }')">Delete</button>
-                      </div>
-                  `;
-                novelListEl.appendChild(li);
-              });
-            }
-
-            function updateNovelTitle(newTitle) {
-              const novel = getNovelById(currentNovelId);
-              if (novel) {
-                novel.title = newTitle.trim() || "Untitled Novel";
-                saveNovels();
-                 // No need to re-render entire list, just update title if needed (not strictly necessary)
-              }
-            }
-
-            function renderNovelEditor() {
-              const novel = getNovelById(currentNovelId);
-              if (!novel) {
-                console.error("Cannot render editor: Novel not found");
-                showNovelList(); // Go back if novel doesn't exist
-                return;
-              }
-
-              document.getElementById("editNovelTitle").value =
-                novel.title || "Untitled Novel";
-              const chaptersContainer = document.getElementById("chaptersContainer");
-              chaptersContainer.innerHTML = ""; // Clear existing chapters
-
-              const summaryStates = getChapterSummaryStates();
-
-              novel.chapters.forEach((chapter, index) => {
-                const chapterEl = document.createElement("div");
-                chapterEl.classList.add("chapter");
-                chapterEl.dataset.chapterId = chapter.id;
-                chapterEl.dataset.chapterIndex = index; // Keep track of index for moving
-
-                chapterEl.innerHTML = `
-                      <div class="chapter-header">
-                          <input
-                              type="text"
-                              class="chapter-title"
-                              value="${chapter.title || "Untitled Chapter"}"
-                              onchange="updateChapterTitle('${novel.id}', '${chapter.id}', this.value)"
-                              placeholder="Chapter Title"
-                          />
-                          <div class="chapter-controls">
-                              <button class="move-btn" onclick="moveChapter('${novel.id}', '${chapter.id}', -1)" ${
-                  index === 0 ? "disabled" : ""
-                }>↑</button>
-                              <button class="move-btn" onclick="moveChapter('${novel.id}', '${chapter.id}', 1)" ${
-                  index === novel.chapters.length - 1 ? "disabled" : ""
-                }>↓</button>
-                              <button class="delete-btn" onclick="deleteChapter('${novel.id}', '${chapter.id}')">Delete Chapter</button>
-                          </div>
-                      </div>
-
-                      <div class="scene-beats-container">
-                          <!-- Scene beats will be injected here -->
-                      </div>
-
-                      <div class="add-beat-area">
-                          <textarea class="new-beat-text" placeholder="Add new scene beat instruction..."></textarea>
-                          <button onclick="addSceneBeat('${novel.id}', '${chapter.id}')">+ Add Beat</button>
-                      </div>
-
-                      <hr style="margin: 15px 0;">
-
-                      <div>
-                          <div class="summary-header" onclick="toggleChapterSummary('${chapter.id}')">
-                              <span class="collapse-indicator">▼</span> <!-- Default open arrow -->
-                              <h4>Chapter Summary</h4>
-                          </div>
-                          <div class="summary-section" id="summary-section-${chapter.id}">
-                              <button onclick="copyChapterSummaryPrompt('${novel.id}', '${chapter.id}', this)">Copy Summary Prompt</button>
-                              <span class="feedback">Copied!</span>
-                              <textarea
-                                  class="summary-text-area"
-                                  placeholder="Paste chapter summary generated by AI here..."
-                                  onchange="updateChapterSummary('${novel.id}', '${chapter.id}', this.value)"
-                              >${chapter.summary || ""}</textarea>
-                          </div>
-                      </div>
-                  `;
-
-                const summarySection = chapterEl.querySelector(
-                  `#summary-section-${chapter.id}`
-                );
-                const indicator = chapterEl.querySelector(".collapse-indicator");
-                // Default to collapsed (true) if no state is stored for this chapter
-                const isCollapsed = summaryStates[chapter.id] ?? true; // Default collapsed
-
-                if (summarySection && indicator) {
-                  if (isCollapsed) {
-                    summarySection.classList.add("collapsed");
-                    indicator.style.transform = "rotate(-90deg)";
-                  } else {
-                    summarySection.classList.remove("collapsed");
-                    indicator.style.transform = ""; // Default upright arrow
-                  }
-                }
-
-                chaptersContainer.appendChild(chapterEl);
-                renderSceneBeats(
-                  novel.id,
-                  chapter.id,
-                  chapterEl.querySelector(".scene-beats-container")
-                );
-              });
-              // Apply filter after rendering
-              filterChapters(document.getElementById('chapterFilter').value);
-            }
-
-            function renderSceneBeats(novelId, chapterId, container) {
-              const novel = getNovelById(novelId);
-              const chapter = getChapterById(novel, chapterId);
-              container.innerHTML = ""; // Clear existing beats
-
-              if (!chapter || chapter.sceneBeats.length === 0) {
-                container.innerHTML =
-                  '<p style="color: #888; font-style: italic;">No scene beats yet.</p>';
-                return;
-              }
-
-              chapter.sceneBeats.forEach((beat, index) => {
-                const beatEl = document.createElement("div");
-                beatEl.classList.add("scene-beat");
-                beatEl.dataset.beatId = beat.id;
-                beatEl.dataset.beatIndex = index; // Keep track of index for moving
-
-                beatEl.innerHTML = `
-                       <p style="margin-bottom: 2px; font-size: 0.9em; color: #555;"><strong>Scene Beat Instruction:</strong></p>
-                      <textarea
-                          class="beat-text-area"
-                          placeholder="Scene beat description / instruction..."
-                          onchange="updateSceneBeatText('${novelId}', '${chapterId}', '${beat.id}', this.value)"
-                      >${beat.text || ""}</textarea>
-
-                      <div class="beat-controls">
-                          <button class="move-btn" onclick="moveSceneBeat('${novelId}', '${chapterId}', '${beat.id}', -1)" ${
-                  index === 0 ? "disabled" : ""
-                }>↑</button>
-                          <button class="move-btn" onclick="moveSceneBeat('${novelId}', '${chapterId}', '${beat.id}', 1)" ${
-                  index === chapter.sceneBeats.length - 1 ? "disabled" : ""
-                }>↓</button>
-                          <button onclick="showPromptDialog('${novelId}', '${chapterId}', '${beat.id}')">Show Prompt</button>
-                          <button class="delete-btn" onclick="deleteSceneBeat('${novelId}', '${chapterId}', '${beat.id}')">Delete Beat</button>
-                      </div>
-                       <p style="margin-bottom: 2px; font-size: 0.9em; color: #555;"><strong>AI Generated Content:</strong></p>
-                       <textarea
-                          class="generated-text-area"
-                          placeholder="Paste AI generated content here..."
-                          onchange="updateGeneratedText('${novelId}', '${chapterId}', '${beat.id}', this.value)"
-                      >${beat.generatedText || ""}</textarea>
-                  `;
-                container.appendChild(beatEl);
-              });
-            }
-
-            // --- Render chapter filter dropdown ---
-            function updateChapterFilter() {
-              const novel = getNovelById(currentNovelId);
-              const filterSelect = document.getElementById('chapterFilter');
-              if (!novel || !filterSelect) return;
-
-              // Save current selection if any
-              const currentValue = filterSelect.value;
-
-              // Clear existing options except for "All Chapters"
-              while (filterSelect.options.length > 1) {
-                filterSelect.remove(1);
-              }
-
-              // Add option for each chapter
-              novel.chapters.forEach((chapter, index) => {
-                const option = document.createElement('option');
-                option.value = chapter.id;
-                option.textContent = chapter.title || `Chapter ${index + 1}`;
-                filterSelect.appendChild(option);
-              });
-
-              // Restore selection if possible, otherwise default to 'all'
-              if (currentValue && novel.chapters.some(ch => ch.id === currentValue)) {
-                 filterSelect.value = currentValue;
-              } else {
-                 filterSelect.value = 'all'; // Default to All Chapters
-              }
-
-              // Apply the filter (important after loading/modifying chapters)
-              filterChapters(filterSelect.value);
-            }
-
-            // --- Filter chapters based on selection ---
-            function filterChapters(chapterId) {
-              const chaptersContainer = document.getElementById('chaptersContainer');
-              if (!chaptersContainer) return;
-              const chapterElements = chaptersContainer.querySelectorAll('.chapter');
-
-              let foundVisible = false;
-              chapterElements.forEach(el => {
-                const isVisible = (chapterId === 'all' || el.dataset.chapterId === chapterId);
-                el.style.display = isVisible ? 'block' : 'none';
-                if (isVisible) foundVisible = true;
-              });
-
-              // Optional: Add message if filter results in no visible chapters
-               if (chapterId !== 'all' && !foundVisible && chapterElements.length > 0) {
-                   let messageEl = chaptersContainer.querySelector('.no-chapter-match-message');
-                   if (!messageEl) {
-                       messageEl = document.createElement('p');
-                       messageEl.className = 'no-chapter-match-message';
-                       messageEl.style.fontStyle = 'italic';
-                       messageEl.style.color = '#888';
-                       chaptersContainer.appendChild(messageEl);
-                   }
-                   messageEl.textContent = `Chapter not found or no chapters exist matching the filter. Showing all.`;
-                   filterSelect.value = 'all'; // Reset dropdown
-                   filterChapters('all'); // Show all again
-               } else {
-                   const messageEl = chaptersContainer.querySelector('.no-chapter-match-message');
-                   if (messageEl) messageEl.remove(); // Remove message if chapters are visible
-               }
-            }
-
-            // --- UI Navigation ---
-
-            function showView(viewId) {
-              document.getElementById("novelListView").style.display = "none";
-              document.getElementById("novelEditorView").style.display = "none";
-              document.getElementById("settingsView").style.display = "none"; // Hide placeholder settings view
-
-              const view = document.getElementById(viewId);
-              if (view) {
-                view.style.display = "block";
-              } else {
-                console.error("Attempted to show unknown view:", viewId);
-                document.getElementById("novelListView").style.display = "block"; // Fallback
-              }
-            }
-
-            function showNovelList() {
-              currentNovelId = null;
-              showView("novelListView");
-              document.getElementById("newNovelTitle").value = ""; // Clear input field
-              const importArea = document.querySelector(".import-area");
-              importArea.classList.remove("show"); // Hide import area if open
-              document.getElementById("importText").value = "";
-              renderNovelList();
-            }
-
-            function showNovelEditor() {
-              if (!currentNovelId) return;
-              showView("novelEditorView");
-              renderNovelEditor();
-              updateChapterFilter(); // Update and apply the chapter filter dropdown
-            }
-
-            // --- Novel Actions ---
-
-            function createNovel() {
-              const titleInput = document.getElementById("newNovelTitle");
-              const title = titleInput.value.trim() || "Untitled Novel";
-              const newNovel = {
-                id: generateId(),
-                title: title,
-                template: null, // Initialize template as null (will use default)
-                chapters: [],
-              };
-              novels.push(newNovel);
-              saveNovels();
-              titleInput.value = ""; // Clear input
-              openNovel(newNovel.id); // Automatically open the new novel
-            }
-
-            function openNovel(id) {
-              currentNovelId = id;
-              showNovelEditor();
-            }
-
-            function deleteNovel(id) {
-              const novelToDelete = getNovelById(id);
-              if (!novelToDelete) return;
-              if (
-                confirm(
-                  `Are you sure you want to delete the novel "${
-                    novelToDelete.title || "Untitled Novel"
-                  }"? This action cannot be undone.`
-                )
-              ) {
-                novels = novels.filter((novel) => novel.id !== id);
-                saveNovels();
-                renderNovelList(); // Refresh list view
-              }
-            }
-
-            function deleteCurrentNovel() {
-              if (currentNovelId) {
-                const novelToDelete = getNovelById(currentNovelId);
-                if (!novelToDelete) return;
-                if (
-                  confirm(
-                    `Are you sure you want to delete the novel "${
-                      novelToDelete.title || "Untitled Novel"
-                    }"? This action cannot be undone.`
-                  )
-                ) {
-                  novels = novels.filter((novel) => novel.id !== currentNovelId);
-                  saveNovels();
-                  showNovelList(); // Go back to list view
-                }
-              }
-            }
-
-            // --- Chapter Actions ---
-
-            function addChapter() {
-              const novel = getNovelById(currentNovelId);
-              if (!novel) return;
-
-              const newChapter = {
-                id: generateId(),
-                title: `Chapter ${novel.chapters.length + 1}`,
-                sceneBeats: [],
-                summary: "",
-              };
-              novel.chapters.push(newChapter);
-              saveNovels();
-              renderNovelEditor();
-              updateChapterFilter(); // Update filter after adding a chapter
-              // Scroll to the new chapter? Optional.
-               setTimeout(() => { // Allow DOM update
-                   const newChapterEl = document.querySelector(`.chapter[data-chapter-id="${newChapter.id}"]`);
-                   if(newChapterEl) newChapterEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
-               }, 100);
-            }
-
-            function deleteChapter(novelId, chapterId) {
-              const novel = getNovelById(novelId);
-              if (!novel) return;
-              const chapterIndex = novel.chapters.findIndex(ch => ch.id === chapterId);
-              if (chapterIndex === -1) return; // Not found
-
-              const chapter = novel.chapters[chapterIndex];
-
-              if (
-                confirm(
-                  `Are you sure you want to delete "${
-                    chapter?.title || "this chapter"
-                  }" and all its scene beats?`
-                )
-              ) {
-                novel.chapters.splice(chapterIndex, 1); // Remove chapter by index
-                removeChapterSummaryState(chapterId); // Clean up summary state
-                saveNovels();
-                renderNovelEditor(); // Re-render the editor view
-                updateChapterFilter(); // Update filter after deleting
-              }
-            }
-
-            function updateChapterTitle(novelId, chapterId, newTitle) {
-              const novel = getNovelById(novelId);
-              const chapter = getChapterById(novel, chapterId);
-              if (chapter) {
-                chapter.title = newTitle.trim() || "Untitled Chapter";
-                saveNovels();
-                updateChapterFilter(); // Update filter when title changes
-              }
-            }
-
-            // Updated moveChapter to use chapter ID for robustness
-            function moveChapter(novelId, chapterId, direction) {
-              // direction: -1 for up, 1 for down
-              const novel = getNovelById(novelId);
-              if (!novel) return;
-
-              const chapterIndex = novel.chapters.findIndex(ch => ch.id === chapterId);
-              if (chapterIndex === -1) return; // Chapter not found
-
-              const newIndex = chapterIndex + direction;
-              if (newIndex < 0 || newIndex >= novel.chapters.length) {
-                return; // Invalid move
-              }
-
-              // Swap elements
-              const temp = novel.chapters[chapterIndex];
-              novel.chapters[chapterIndex] = novel.chapters[newIndex];
-              novel.chapters[newIndex] = temp;
-              // Or using array destructuring:
-              // [novel.chapters[chapterIndex], novel.chapters[newIndex]] = [novel.chapters[newIndex], novel.chapters[chapterIndex]];
-
-              saveNovels();
-              const currentFilter = document.getElementById('chapterFilter').value; // Preserve filter
-              renderNovelEditor(); // Re-render to reflect new order
-              updateChapterFilter(); // Update filter dropdown order
-              document.getElementById('chapterFilter').value = currentFilter; // Restore filter selection
-              filterChapters(currentFilter); // Re-apply filter
-            }
-
-            // --- Scene Beat Actions ---
-
-            function addSceneBeat(novelId, chapterId) {
-              const novel = getNovelById(novelId);
-              const chapter = getChapterById(novel, chapterId);
-              if (!chapter) return;
-
-              // Find the specific chapter element to get the text from the correct input
-              const chapterElement = document.querySelector(
-                `.chapter[data-chapter-id="${chapterId}"]`
-              );
-              if (!chapterElement) return;
-              const newBeatTextArea = chapterElement.querySelector(".new-beat-text");
-              const text = newBeatTextArea.value.trim();
-
-              if (!text) {
-                alert("Please enter some text for the scene beat instruction.");
-                return;
-              }
-
-              const newBeat = {
-                id: generateId(),
-                text: text,
-                generatedText: "",
-              };
-              chapter.sceneBeats.push(newBeat);
-              saveNovels();
-              newBeatTextArea.value = ""; // Clear the input field
-
-              // Re-render just the scene beats for this chapter for efficiency
-              const beatsContainer = chapterElement.querySelector(
-                ".scene-beats-container"
-              );
-              renderSceneBeats(novelId, chapterId, beatsContainer);
-              newBeatTextArea.focus(); // Focus input for quick next entry
-
-              // Ensure summaries are properly initialized (might not be needed here, but safe)
-              // initializeCollapsibleSummaries(); // Called within renderNovelEditor -> renderSceneBeats lifecycle
-            }
-
-            function deleteSceneBeat(novelId, chapterId, beatId) {
-              const novel = getNovelById(novelId);
-              const chapter = getChapterById(novel, chapterId);
-              if (!chapter) return;
-
-              const beatIndex = chapter.sceneBeats.findIndex(b => b.id === beatId);
-              if (beatIndex === -1) return; // Not found
-
-              if (confirm("Are you sure you want to delete this scene beat?")) {
-                chapter.sceneBeats.splice(beatIndex, 1); // Remove beat by index
-                saveNovels();
-                // Re-render just the scene beats for this chapter
-                const chapterElement = document.querySelector(
-                  `.chapter[data-chapter-id="${chapterId}"]`
-                );
-                if (chapterElement) {
-                  const beatsContainer = chapterElement.querySelector(
-                    ".scene-beats-container"
-                  );
-                  renderSceneBeats(novelId, chapterId, beatsContainer);
-                } else {
-                  renderNovelEditor(); // Fallback to full render if element not found
-                }
-              }
-            }
-
-            function updateSceneBeatText(novelId, chapterId, beatId, newText) {
-              const novel = getNovelById(novelId);
-              const chapter = getChapterById(novel, chapterId);
-              const beat = getSceneBeatById(chapter, beatId);
-              // No trimming here, preserve user input exactly
-              if (beat && beat.text !== newText) {
-                beat.text = newText;
-                saveNovels();
-              }
-            }
-
-            function updateGeneratedText(novelId, chapterId, beatId, genText) {
-              const novel = getNovelById(novelId);
-              const chapter = getChapterById(novel, chapterId);
-              const beat = getSceneBeatById(chapter, beatId);
-              // No trimming here, preserve AI output exactly
-              if (beat && beat.generatedText !== genText) {
-                beat.generatedText = genText;
-                saveNovels();
-              }
-            }
-
-             // Updated moveSceneBeat to use beat ID for robustness
-            function moveSceneBeat(novelId, chapterId, beatId, direction) {
-              // -1 up, 1 down
-              const novel = getNovelById(novelId);
-              const chapter = getChapterById(novel, chapterId);
-              if (!chapter) return;
-
-              const beatIndex = chapter.sceneBeats.findIndex(b => b.id === beatId);
-               if (beatIndex === -1) return; // Beat not found
-
-              const newIndex = beatIndex + direction;
-              if (newIndex < 0 || newIndex >= chapter.sceneBeats.length) {
-                return; // Invalid move
-              }
-
-              // Swap elements
-               const temp = chapter.sceneBeats[beatIndex];
-               chapter.sceneBeats[beatIndex] = chapter.sceneBeats[newIndex];
-               chapter.sceneBeats[newIndex] = temp;
-              // Or using array destructuring:
-              // [chapter.sceneBeats[beatIndex], chapter.sceneBeats[newIndex]] = [chapter.sceneBeats[newIndex], chapter.sceneBeats[beatIndex]];
-
-              saveNovels();
-              // Re-render just the scene beats for this chapter
-              const chapterElement = document.querySelector(
-                `.chapter[data-chapter-id="${chapterId}"]`
-              );
-              if (chapterElement) {
-                const beatsContainer = chapterElement.querySelector(
-                  ".scene-beats-container"
-                );
-                renderSceneBeats(novelId, chapterId, beatsContainer);
-              } else {
-                renderNovelEditor(); // Fallback to full render
-              }
-            }
-
-            function updateChapterSummary(novelId, chapterId, summaryText) {
-                const novel = getNovelById(novelId);
-                const chapter = getChapterById(novel, chapterId);
-                if (chapter && chapter.summary !== summaryText) {
-                    chapter.summary = summaryText; // Preserve exact text
-                    saveNovels();
-                }
-            }
-
-            // --- Prompt Generation & Clipboard ---
-
-            function showPromptDialog(novelId, chapterId, beatId) {
-              const novel = getNovelById(novelId);
-              const chapter = getChapterById(novel, chapterId);
-              const beat = getSceneBeatById(chapter, beatId);
-              if (!novel || !chapter || !beat) {
-                  console.error("Missing data for prompt generation:", { novelId, chapterId, beatId });
-                  alert("Error: Could not find necessary data to generate prompt.");
-                  return;
-              }
-
-              // Find indices
-              const chapterIndex = novel.chapters.findIndex(ch => ch.id === chapterId);
-              const beatIndex = chapter.sceneBeats.findIndex(b => b.id === beatId);
-              if (chapterIndex === -1 || beatIndex === -1) {
-                   console.error("Error finding chapter/beat index:", { chapterIndex, beatIndex });
-                   alert("Error: Could not determine position in story.");
-                   return;
-              }
-
-              // Build story so far section
-              let storySoFar = "";
-              const maxContextLength = 10000; // Limit context length (characters) to avoid overly long prompts
-
-              // 1. Add previous chapters' summaries (or full text if no summary)
-              for (let i = 0; i < chapterIndex; i++) {
-                const prevChapter = novel.chapters[i];
-                let chapterContext = "";
-                if (prevChapter.summary) {
-                  chapterContext = `Summary of Chapter ${i + 1}: ${prevChapter.title || "Untitled"}\n${prevChapter.summary}\n\n`;
-                } else {
-                  // Fallback: Use generated text of previous chapter beats if no summary
-                  const prevChapterText = prevChapter.sceneBeats
-                    .map((b) => b.generatedText || "") // Prioritize generated text
-                    .filter(Boolean) // Remove empty strings
-                    .join("\n\n"); // Separate beats clearly
-                  if (prevChapterText) {
-                     chapterContext = `Content from Chapter ${i + 1}: ${prevChapter.title || "Untitled"}\n${prevChapterText}\n\n`;
-                  }
-                }
-                 // Add context if it doesn't exceed limit drastically (rough check)
-                 if ((storySoFar.length + chapterContext.length) < maxContextLength * 1.2) {
-                    storySoFar += chapterContext;
-                 } else {
-                    console.warn(`Context limit reached, stopping at Chapter ${i}`);
-                    break; // Stop adding chapters if context gets too long
-                 }
-              }
-
-              // 2. Add current chapter's previous generated beats' text
-              for (let i = 0; i < beatIndex; i++) {
-                const prevBeat = chapter.sceneBeats[i];
-                if (prevBeat.generatedText) {
-                   const beatText = prevBeat.generatedText + "\n\n"; // Double newline between beats
-                   if ((storySoFar.length + beatText.length) < maxContextLength * 1.2) {
-                       storySoFar += beatText;
-                   } else {
-                       console.warn(`Context limit reached, stopping at Beat ${i} in Chapter ${chapterIndex + 1}`);
-                       break; // Stop adding beats if context gets too long
-                   }
-                }
-              }
-
-              // Truncate storySoFar if it exceeds the limit
-              if (storySoFar.length > maxContextLength) {
-                 const excess = storySoFar.length - maxContextLength;
-                 storySoFar = `... (trimmed ${excess} characters)\n` + storySoFar.slice(excess);
-                 console.warn(`Story context truncated to ${maxContextLength} characters.`);
-              }
-
-              storySoFar = storySoFar.trim();
-
-              // Get the effective template for this novel
-              const template = getEffectiveTemplate(novel);
-
-              // Prepare the instructions (current beat's text)
-              const instructionsText = beat.text || "";
-
-              // Replace placeholders
-              let prompt = template.replace(
-                "{storySoFar}",
-                storySoFar || "This is the beginning of the story." // Add fallback if storySoFar is empty
-              );
-              prompt = prompt.replace("{instructions}", instructionsText);
-
-              // Show the prompt in the modal
-              document.getElementById("promptTextarea").value = prompt.trim();
-
-              // Display the modal
-              const modal = document.getElementById("promptModal");
-              modal.style.display = "flex";
-            }
-
-            function closePromptModal() {
-              const modal = document.getElementById("promptModal");
-              modal.style.display = "none";
-            }
-
-            function copyPromptFromModal() {
-              const promptText = document.getElementById("promptTextarea").value;
-              const copyButton = document.querySelector("#promptModal .modal-footer button:first-child"); // More specific selector
-              copyToClipboard(promptText, copyButton); // Reuse copyToClipboard
-            }
-
-            function showFeedback(buttonElement, message = "Copied!") {
-              // Show feedback next to the button or find a suitable sibling
-              let feedbackEl = buttonElement?.nextElementSibling;
-              if (!feedbackEl || !feedbackEl.classList.contains("feedback")) {
-                  // If no direct sibling, maybe it's inside a parent div
-                  feedbackEl = buttonElement?.closest('div')?.querySelector('.feedback');
-              }
-
-              // Handle feedback for modal buttons specifically
-               if (buttonElement?.closest('.modal-footer')) {
-                  const originalText = buttonElement.textContent;
-                  buttonElement.textContent = message;
-                  buttonElement.disabled = true;
-                  setTimeout(() => {
-                      buttonElement.textContent = originalText;
-                      buttonElement.disabled = false;
-                  }, 1500);
-                  return; // Don't use the .feedback span for modal buttons
-               }
-
-              if (feedbackEl) {
-                feedbackEl.textContent = message; // Allow custom messages
-                feedbackEl.classList.add("show");
-                setTimeout(() => {
-                  feedbackEl.classList.remove("show");
-                   feedbackEl.textContent = "Copied!"; // Reset text
-                }, 1500); // Hide after 1.5 seconds
-              } else {
-                console.warn("Could not find feedback element for button:", buttonElement);
-                // Fallback alert if feedback element isn't found
-                // alert(message);
-              }
-            }
-
-            function copyToClipboard(text, buttonElement) {
-              if (!text) {
-                  console.warn("Attempted to copy empty text.");
-                  showFeedback(buttonElement, "Nothing to copy!");
-                  return;
-              }
-              navigator.clipboard
-                .writeText(text)
-                .then(() => {
-                  showFeedback(buttonElement); // Default "Copied!" message
-                  console.log("Text copied to clipboard");
-                })
-                .catch((err) => {
-                  console.error("Failed to copy text: ", err);
-                  alert(
-                    "Failed to copy text. Your browser might not support this feature or permission was denied."
-                  );
-                });
-            }
-
-            function copyChapterSummaryPrompt(novelId, chapterId, buttonElement) {
-              const novel = getNovelById(novelId);
-              const chapter = getChapterById(novel, chapterId);
-              if (!chapter) return;
-
-              // Collect only the generated text for summary.
-              let chapterText = chapter.sceneBeats
-                .map((beat) => beat.generatedText || "") // Only generated text
-                .filter(Boolean) // Filter out empty strings
-                .join("\n\n"); // Join with double newline for clarity
-
-              if (!chapterText) {
-                  alert("No generated content in this chapter to summarize.");
-                  return;
-              }
-
-              const prompt = `Please write a concise summary of the following chapter content:\n\n${chapterText}`;
-              copyToClipboard(prompt, buttonElement);
-            }
-
-            // copyContinuePrompt is effectively replaced by showPromptDialog + copyPromptFromModal
-            // Kept here for reference or potential future use if direct button is needed again.
-            // function copyContinuePrompt(novelId, chapterId, beatId, buttonElement) {
-            //    showPromptDialog(novelId, chapterId, beatId); // Generates the prompt
-            //    const promptText = document.getElementById("promptTextarea").value; // Gets generated prompt
-            //    copyToClipboard(promptText, buttonElement); // Copies it
-            //    closePromptModal(); // Optionally close modal after copy
-            // }
-
-
-            // --- Import / Export ---
-
-            function exportNovel(buttonElement) {
-              const novel = getNovelById(currentNovelId);
-              if (!novel) return;
-
-              let markdown = `# ${novel.title}\n\n`;
-
-              // Export Template first (optional placement, but good to have)
-              markdown += `### Template\n\n`;
-              markdown += `${getEffectiveTemplate(novel)}\n\n`; // Export effective template
-
-              novel.chapters.forEach((chapter, chapterIndex) => {
-                markdown += `## ${chapter.title}\n\n`;
-
-                if (chapter.summary) {
-                  markdown += `### Summary\n\n${chapter.summary}\n\n`;
-                }
-
-                markdown += `### Scene Beats\n\n`;
-                chapter.sceneBeats.forEach((beat, beatIndex) => {
-                  // Consistent numbering based on order
-                  markdown += `#### Beat ${beatIndex + 1}\n\n`;
-                  markdown += `**Scene Description:**\n${beat.text || ""}\n\n`; // Ensure newline even if empty
-                  markdown += `**Generated Content:**\n${beat.generatedText || ""}\n\n`; // Ensure newline even if empty
-                });
-                // markdown += "\n"; // Removed extra newline after last beat
-              });
-
-              copyToClipboard(markdown.trim(), buttonElement);
-            }
-
-            function toggleImportArea() {
-              const importArea = document.querySelector(".import-area");
-              importArea.classList.toggle("show");
-              if (!importArea.classList.contains("show")) {
-                document.getElementById("importText").value = "";
-              } else {
-                document.getElementById("importText").focus();
-              }
-            }
-
-            function importNovel() {
-              const text = document.getElementById("importText").value; // Don't trim yet, preserve newlines
-              if (!text) {
-                alert("Please paste the exported novel markdown content first.");
-                return;
-              }
-
-              try {
-                const novel = {
-                  id: generateId(),
-                  title: "Imported Novel", // Default title
-                  template: null, // Initialize template
-                  chapters: [],
-                };
-
-                const lines = text.split('\n');
-                let currentChapter = null;
-                let currentBeat = null;
-                let readingMode = null; // null | 'summary' | 'description' | 'generated' | 'template'
-                let accumulatingText = ""; // Buffer for multi-line content
-
-                lines.forEach((line) => {
-                  const trimmedLine = line.trim();
-
-                  // Check for section headers FIRST
-                  if (trimmedLine.startsWith("# ")) {
-                      finishAccumulatingText(); // Finish previous section
-                      novel.title = trimmedLine.substring(2).trim();
-                      readingMode = null;
-                  } else if (trimmedLine.startsWith("## ")) {
-                      finishAccumulatingText();
-                      currentChapter = {
-                          id: generateId(),
-                          title: trimmedLine.substring(3).trim(),
-                          summary: "",
-                          sceneBeats: [],
-                      };
-                      novel.chapters.push(currentChapter);
-                      currentBeat = null;
-                      readingMode = null;
-                  } else if (trimmedLine === "### Template") {
-                      finishAccumulatingText();
-                      readingMode = 'template';
-                  } else if (trimmedLine === "### Summary" && currentChapter) {
-                      finishAccumulatingText();
-                      readingMode = 'summary';
-                  } else if (trimmedLine === "### Scene Beats" && currentChapter) {
-                      finishAccumulatingText();
-                      readingMode = null; // End summary/template reading
-                  } else if (trimmedLine.startsWith("#### Beat") && currentChapter) {
-                      finishAccumulatingText();
-                      currentBeat = {
-                          id: generateId(),
-                          text: "",
-                          generatedText: "",
-                      };
-                      currentChapter.sceneBeats.push(currentBeat);
-                      readingMode = null;
-                  } else if (trimmedLine === "**Scene Description:**" && currentBeat) {
-                      finishAccumulatingText();
-                      readingMode = 'description';
-                  } else if (trimmedLine === "**Generated Content:**" && currentBeat) {
-                      finishAccumulatingText();
-                      readingMode = 'generated';
-                  } else {
-                      // If not a header, it's content belonging to the current readingMode
-                      accumulatingText += line + '\n';
-                  }
-                });
-
-                // Finish the last section after the loop
-                finishAccumulatingText();
-
-                // Helper to assign accumulated text to the correct field
-                function finishAccumulatingText() {
-                    const content = accumulatingText.trim(); // Trim final content
-                    if (readingMode === 'template') {
-                        // Store template if it's not the default, otherwise store null
-                         novel.template = (content && content !== DEFAULT_PROMPT_TEMPLATE) ? content : null;
-                    } else if (readingMode === 'summary' && currentChapter) {
-                        currentChapter.summary = content;
-                    } else if (readingMode === 'description' && currentBeat) {
-                        currentBeat.text = content;
-                    } else if (readingMode === 'generated' && currentBeat) {
-                        currentBeat.generatedText = content;
-                    }
-                    accumulatingText = ""; // Reset buffer
-                }
-
-                // Basic validation
-                if (!novel.title || novel.title === "Imported Novel") {
-                    console.warn("Imported novel might be missing title.");
-                }
-                if (novel.chapters.length === 0 && !novel.template) {
-                   // Check if *anything* useful was parsed. The template check is important.
-                    console.warn("Imported text didn't seem to contain chapter or template data.");
-                    // Don't throw error yet, maybe user pasted something else
-                }
-
-                novels.push(novel);
-                saveNovels();
-                toggleImportArea(); // Close the import area
-                renderNovelList(); // Refresh the list
-                alert(`Novel "${novel.title}" imported successfully!`);
-              } catch (e) {
-                console.error("Import error:", e);
-                alert(
-                  "Error importing novel. Please check the format. It should be the Markdown exported from this tool.\n\n" + e.message
-                );
-              }
-            }
-
-
-            // --- Collapsible Summary State Management ---
-
-            const LS_SUMMARY_STATE_KEY = "chapterSummaryStates";
-
-            function getChapterSummaryStates() {
-              try {
-                // Ensure it returns an object
-                const states = JSON.parse(localStorage.getItem(LS_SUMMARY_STATE_KEY) || "{}");
-                return typeof states === 'object' && states !== null ? states : {};
-              } catch (e) {
-                console.error("Error reading summary states:", e);
-                localStorage.removeItem(LS_SUMMARY_STATE_KEY); // Clear potentially corrupted data
-                return {}; // Return empty object on error
-              }
-            }
-
-            function saveChapterSummaryState(chapterId, isCollapsed) {
-              const states = getChapterSummaryStates();
-              states[chapterId] = isCollapsed; // true if collapsed, false if expanded
-              try {
-                localStorage.setItem(LS_SUMMARY_STATE_KEY, JSON.stringify(states));
-              } catch (e) {
-                console.error("Error saving summary state:", e);
-                // Optionally alert the user if saving fails critically
-              }
-            }
-
-            function removeChapterSummaryState(chapterId) {
-              const states = getChapterSummaryStates();
-              if (states.hasOwnProperty(chapterId)) {
-                delete states[chapterId];
-                try {
-                  localStorage.setItem(LS_SUMMARY_STATE_KEY, JSON.stringify(states));
-                } catch (e) {
-                  console.error("Error removing summary state:", e);
-                }
-              }
-            }
-
-            // This function isn't strictly needed anymore as state is applied during renderNovelEditor
-            // function initializeCollapsibleSummaries() { }
-
-            function toggleChapterSummary(chapterId) {
-              const summarySection = document.getElementById(`summary-section-${chapterId}`);
-              const indicator = summarySection?.previousElementSibling?.querySelector(".collapse-indicator"); // Find indicator safely
-
-              if (summarySection && indicator) {
-                const isCurrentlyCollapsed = summarySection.classList.contains("collapsed");
-                summarySection.classList.toggle("collapsed");
-                const isNowCollapsed = !isCurrentlyCollapsed; // State after toggle
-
-                // Update arrow direction visually
-                indicator.style.transform = isNowCollapsed ? "rotate(-90deg)" : "";
-
-                // Save the state to localStorage
-                saveChapterSummaryState(chapterId, isNowCollapsed);
-              } else {
-                console.warn(
-                  `Could not find summary section or indicator for chapter ${chapterId}`
-                );
-              }
-            }
-
-            // --- Initialization ---
-
-            document.addEventListener("DOMContentLoaded", () => {
-              loadNovels();
-              showNovelList(); // Start by showing the list of novels
+              return newStates;
             });
+          }
+        };
+
+        const handleUpdateNovel = (id, updates) => {
+          updateNovels((prev) =>
+            prev.map((novel) =>
+              novel.id === id ? { ...novel, ...updates } : novel
+            )
+          );
+        };
+
+        const handleBackToList = () => {
+          setCurrentView("list");
+          setCurrentNovelId(null);
+        };
+
+        // --- Chapter Actions ---
+        const handleAddChapter = (novelId) => {
+          const newChapter = {
+            id: generateId(),
+            title: "", // Start untitled
+            sceneBeats: [],
+            summary: "",
+          };
+          updateNovels((prev) =>
+            prev.map((novel) => {
+              if (novel.id === novelId) {
+                // Ensure chapters is an array before accessing length
+                const currentChapters = Array.isArray(novel.chapters)
+                  ? novel.chapters
+                  : [];
+                // Assign default title based on new position
+                newChapter.title = `Chapter ${currentChapters.length + 1}`;
+                return { ...novel, chapters: [...currentChapters, newChapter] };
+              }
+              return novel;
+            })
+          );
+          // Optionally scroll to new chapter - requires DOM refs, more complex in React
+        };
+
+        const handleDeleteChapter = (novelId, chapterId) => {
+          const novel = novels.find((n) => n.id === novelId);
+          // ****** FIXED HERE ******
+          // Replace novel?.chapters with novel && novel.chapters
+          const chapter =
+            novel &&
+            Array.isArray(novel.chapters) &&
+            novel.chapters.find((c) => c.id === chapterId);
+          // ****** END FIX ******
+          if (!novel || !chapter) return;
+
+          if (
+            confirm(
+              `Are you sure you want to delete "${
+                chapter.title || "this chapter"
+              }" and all its scene beats?`
+            )
+          ) {
+            updateNovels((prev) =>
+              prev.map((n) => {
+                if (n.id === novelId) {
+                  // Ensure chapters is an array before filtering
+                  const currentChapters = Array.isArray(n.chapters)
+                    ? n.chapters
+                    : [];
+                  return {
+                    ...n,
+                    chapters: currentChapters.filter(
+                      (ch) => ch.id !== chapterId
+                    ),
+                  };
+                }
+                return n;
+              })
+            );
+            // Clean up summary state
+            setSummaryCollapseStates((prevStates) => {
+              const newStates = { ...prevStates };
+              delete newStates[chapterId];
+              return newStates;
+            });
+          }
+        };
+
+        const handleUpdateChapterTitle = (novelId, chapterId, newTitle) => {
+          updateNovels((prev) =>
+            prev.map((n) => {
+              if (n.id === novelId) {
+                const currentChapters = Array.isArray(n.chapters)
+                  ? n.chapters
+                  : [];
+                return {
+                  ...n,
+                  chapters: currentChapters.map((ch) =>
+                    ch.id === chapterId
+                      ? { ...ch, title: newTitle.trim() || "Untitled Chapter" }
+                      : ch
+                  ),
+                };
+              }
+              return n;
+            })
+          );
+        };
+
+        const handleMoveChapter = (novelId, chapterId, direction) => {
+          updateNovels((prev) =>
+            prev.map((n) => {
+              if (n.id === novelId) {
+                const currentChapters = Array.isArray(n.chapters)
+                  ? n.chapters
+                  : [];
+                const chapters = [...currentChapters]; // Create mutable copy
+                const index = chapters.findIndex((ch) => ch.id === chapterId);
+                if (index === -1) return n; // Should not happen
+
+                const newIndex = index + direction;
+                if (newIndex < 0 || newIndex >= chapters.length) return n; // Invalid move
+
+                // Swap
+                [chapters[index], chapters[newIndex]] = [
+                  chapters[newIndex],
+                  chapters[index],
+                ];
+
+                return { ...n, chapters: chapters };
+              }
+              return n;
+            })
+          );
+        };
+
+        // --- Scene Beat Actions ---
+        const handleAddBeat = (novelId, chapterId, text) => {
+          const newBeat = {
+            id: generateId(),
+            text: text.trim(),
+            generatedText: "",
+          };
+          updateNovels((prev) =>
+            prev.map((n) => {
+              if (n.id === novelId) {
+                const currentChapters = Array.isArray(n.chapters)
+                  ? n.chapters
+                  : [];
+                return {
+                  ...n,
+                  chapters: currentChapters.map((ch) => {
+                    if (ch.id === chapterId) {
+                      const currentBeats = Array.isArray(ch.sceneBeats)
+                        ? ch.sceneBeats
+                        : [];
+                      return { ...ch, sceneBeats: [...currentBeats, newBeat] };
+                    }
+                    return ch;
+                  }),
+                };
+              }
+              return n;
+            })
+          );
+        };
+
+        const handleDeleteBeat = (novelId, chapterId, beatId) => {
+          if (confirm("Are you sure you want to delete this scene beat?")) {
+            updateNovels((prev) =>
+              prev.map((n) => {
+                if (n.id === novelId) {
+                  const currentChapters = Array.isArray(n.chapters)
+                    ? n.chapters
+                    : [];
+                  return {
+                    ...n,
+                    chapters: currentChapters.map((ch) => {
+                      if (ch.id === chapterId) {
+                        const currentBeats = Array.isArray(ch.sceneBeats)
+                          ? ch.sceneBeats
+                          : [];
+                        return {
+                          ...ch,
+                          sceneBeats: currentBeats.filter(
+                            (b) => b.id !== beatId
+                          ),
+                        };
+                      }
+                      return ch;
+                    }),
+                  };
+                }
+                return n;
+              })
+            );
+          }
+        };
+
+        const handleUpdateBeatText = (novelId, chapterId, beatId, newText) => {
+          updateNovels((prev) =>
+            prev.map((n) => {
+              if (n.id === novelId) {
+                const currentChapters = Array.isArray(n.chapters)
+                  ? n.chapters
+                  : [];
+                return {
+                  ...n,
+                  chapters: currentChapters.map((ch) => {
+                    if (ch.id === chapterId) {
+                      const currentBeats = Array.isArray(ch.sceneBeats)
+                        ? ch.sceneBeats
+                        : [];
+                      return {
+                        ...ch,
+                        sceneBeats: currentBeats.map((b) =>
+                          b.id === beatId ? { ...b, text: newText } : b
+                        ),
+                      };
+                    }
+                    return ch;
+                  }),
+                };
+              }
+              return n;
+            })
+          );
+        };
+
+        const handleUpdateGeneratedText = (
+          novelId,
+          chapterId,
+          beatId,
+          genText
+        ) => {
+          updateNovels((prev) =>
+            prev.map((n) => {
+              if (n.id === novelId) {
+                const currentChapters = Array.isArray(n.chapters)
+                  ? n.chapters
+                  : [];
+                return {
+                  ...n,
+                  chapters: currentChapters.map((ch) => {
+                    if (ch.id === chapterId) {
+                      const currentBeats = Array.isArray(ch.sceneBeats)
+                        ? ch.sceneBeats
+                        : [];
+                      return {
+                        ...ch,
+                        sceneBeats: currentBeats.map((b) =>
+                          b.id === beatId ? { ...b, generatedText: genText } : b
+                        ),
+                      };
+                    }
+                    return ch;
+                  }),
+                };
+              }
+              return n;
+            })
+          );
+        };
+
+        const handleMoveBeat = (novelId, chapterId, beatId, direction) => {
+          updateNovels((prev) =>
+            prev.map((n) => {
+              if (n.id === novelId) {
+                const currentChapters = Array.isArray(n.chapters)
+                  ? n.chapters
+                  : [];
+                return {
+                  ...n,
+                  chapters: currentChapters.map((ch) => {
+                    if (ch.id === chapterId) {
+                      const currentBeats = Array.isArray(ch.sceneBeats)
+                        ? ch.sceneBeats
+                        : [];
+                      const beats = [...currentBeats]; // Mutable copy
+                      const index = beats.findIndex((b) => b.id === beatId);
+                      if (index === -1) return ch;
+
+                      const newIndex = index + direction;
+                      if (newIndex < 0 || newIndex >= beats.length) return ch;
+
+                      // Swap
+                      [beats[index], beats[newIndex]] = [
+                        beats[newIndex],
+                        beats[index],
+                      ];
+
+                      return { ...ch, sceneBeats: beats };
+                    }
+                    return ch;
+                  }),
+                };
+              }
+              return n;
+            })
+          );
+        };
+
+        // --- Summary Actions ---
+        const handleUpdateChapterSummary = (
+          novelId,
+          chapterId,
+          summaryText
+        ) => {
+          updateNovels((prev) =>
+            prev.map((n) => {
+              if (n.id === novelId) {
+                const currentChapters = Array.isArray(n.chapters)
+                  ? n.chapters
+                  : [];
+                return {
+                  ...n,
+                  chapters: currentChapters.map((ch) =>
+                    ch.id === chapterId ? { ...ch, summary: summaryText } : ch
+                  ),
+                };
+              }
+              return n;
+            })
+          );
+        };
+
+        // ****** FIXED HERE ******
+        const handleToggleSummaryCollapse = (chapterId) => {
+          setSummaryCollapseStates((prevStates) => {
+            // Replace prevStates[chapterId] ?? true with compatible check
+            const currentState =
+              typeof prevStates[chapterId] !== "undefined" &&
+              prevStates[chapterId] !== null
+                ? prevStates[chapterId]
+                : true; // Default to collapsed (true) if undefined/null
+            return {
+              ...prevStates,
+              [chapterId]: !currentState, // Toggle the determined state
+            };
+          });
+        };
+        // ****** END FIX ******
+
+        // --- Prompt Generation ---
+        const generatePromptText = (novelId, chapterId, beatId) => {
+          const novel = novels.find((n) => n.id === novelId);
+          if (!novel || !Array.isArray(novel.chapters))
+            return { error: "Novel or chapters not found/invalid" };
+
+          const chapterIndex = novel.chapters.findIndex(
+            (ch) => ch.id === chapterId
+          );
+          const chapter = novel.chapters[chapterIndex];
+          if (!chapter || !Array.isArray(chapter.sceneBeats))
+            return { error: "Chapter or scene beats not found/invalid" };
+
+          const beatIndex = chapter.sceneBeats.findIndex(
+            (b) => b.id === beatId
+          );
+          const beat = chapter.sceneBeats[beatIndex];
+          if (beatIndex === -1 || !beat)
+            return { error: "Scene beat not found" };
+
+          // Build story so far
+          let storySoFar = "";
+          const maxContextLength = 10000;
+
+          // Previous chapters context
+          for (let i = 0; i < chapterIndex; i++) {
+            const prevChapter = novel.chapters[i];
+            // Ensure prevChapter and its beats are valid before processing
+            if (!prevChapter || !Array.isArray(prevChapter.sceneBeats))
+              continue;
+
+            let chapterContext = "";
+            if (prevChapter.summary) {
+              chapterContext = `Summary of Chapter ${i + 1}: ${
+                prevChapter.title || "Untitled"
+              }\n${prevChapter.summary}\n\n`;
+            } else {
+              const prevChapterText = prevChapter.sceneBeats
+                .map((b) => b.generatedText || "")
+                .filter(Boolean)
+                .join("\n\n");
+              if (prevChapterText) {
+                chapterContext = `Content from Chapter ${i + 1}: ${
+                  prevChapter.title || "Untitled"
+                }\n${prevChapterText}\n\n`;
+              }
+            }
+            if (
+              storySoFar.length + chapterContext.length <
+              maxContextLength * 1.2
+            ) {
+              storySoFar += chapterContext;
+            } else {
+              break;
+            }
+          }
+
+          // Previous beats in current chapter
+          for (let i = 0; i < beatIndex; i++) {
+            const prevBeat = chapter.sceneBeats[i];
+            if (prevBeat && prevBeat.generatedText) {
+              // Check prevBeat exists
+              const beatText = prevBeat.generatedText + "\n\n";
+              if (
+                storySoFar.length + beatText.length <
+                maxContextLength * 1.2
+              ) {
+                storySoFar += beatText;
+              } else {
+                break;
+              }
+            }
+          }
+
+          // Truncate if needed
+          if (storySoFar.length > maxContextLength) {
+            const excess = storySoFar.length - maxContextLength;
+            storySoFar =
+              `... (trimmed ${excess} characters)\n` + storySoFar.slice(excess);
+          }
+
+          storySoFar = storySoFar.trim();
+
+          const template = getEffectiveTemplate(novel);
+          const instructionsText = beat.text || "";
+
+          let prompt = template.replace(
+            "{storySoFar}",
+            storySoFar || "This is the beginning of the story."
+          );
+          prompt = prompt.replace("{instructions}", instructionsText);
+
+          return { prompt: prompt.trim() };
+        };
+
+        // --- Modal Handling ---
+        const handleShowPrompt = (novelId, chapterId, beatId) => {
+          const { prompt, error } = generatePromptText(
+            novelId,
+            chapterId,
+            beatId
+          );
+          if (error) {
+            alert(`Error generating prompt: ${error}`);
+            return;
+          }
+          setModalContent({ type: "prompt", data: { text: prompt } });
+        };
+
+        const handleShowTemplateEditor = (novelId) => {
+          const novel = novels.find((n) => n.id === novelId);
+          if (!novel) return;
+          setModalContent({
+            type: "template",
+            data: {
+              novelId: novel.id,
+              currentTemplate: getEffectiveTemplate(novel),
+            },
+          });
+        };
+
+        const handleCloseModal = () => {
+          setModalContent(null);
+        };
+
+        const handleSaveTemplate = (novelId, newTemplate) => {
+          const templateToSave =
+            newTemplate.trim() !== DEFAULT_PROMPT_TEMPLATE.trim()
+              ? newTemplate
+              : null;
+          handleUpdateNovel(novelId, { template: templateToSave });
+          // Optionally close modal or show feedback inside
+          // For simplicity, we'll just close it here
+          handleCloseModal();
+          alert("Template saved!"); // Simple feedback
+        };
+
+        // --- Copy Actions ---
+        const handleCopyPromptFromModal = (text) => {
+          return copyToClipboard(text); // Returns a promise
+        };
+
+        const handleCopySummaryPrompt = (novelId, chapterId) => {
+          const novel = novels.find((n) => n.id === novelId);
+          // ****** FIXED HERE ******
+          // Replace novel?.chapters with novel && novel.chapters
+          const chapter =
+            novel &&
+            Array.isArray(novel.chapters) &&
+            novel.chapters.find((c) => c.id === chapterId);
+          // ****** END FIX ******
+          if (!chapter || !Array.isArray(chapter.sceneBeats))
+            return Promise.reject(
+              new Error("Chapter or scene beats not found/invalid")
+            );
+
+          const chapterText = chapter.sceneBeats
+            .map((beat) => beat.generatedText || "")
+            .filter(Boolean)
+            .join("\n\n");
+
+          if (!chapterText) {
+            alert("No generated content in this chapter to summarize.");
+            return Promise.reject(new Error("No content to summarize"));
+          }
+
+          const prompt = `Please write a concise summary of the following chapter content:\n\n${chapterText}`;
+          return copyToClipboard(prompt);
+        };
+
+        // --- Import / Export ---
+        const handleExportNovel = (novelId) => {
+          return new Promise((resolve, reject) => {
+            const novel = novels.find((n) => n.id === novelId);
+            if (!novel) return reject(new Error("Novel not found"));
+
+            let markdown = `# ${novel.title || "Untitled Novel"}\n\n`; // Add default title
+            markdown += `### Template\n\n`;
+            markdown += `${getEffectiveTemplate(novel)}\n\n`;
+
+            // Ensure chapters is an array before iterating
+            const currentChapters = Array.isArray(novel.chapters)
+              ? novel.chapters
+              : [];
+            currentChapters.forEach((chapter, chapterIndex) => {
+              markdown += `## ${
+                chapter.title || `Chapter ${chapterIndex + 1}`
+              }\n\n`; // Add default title
+              if (chapter.summary) {
+                markdown += `### Summary\n\n${chapter.summary}\n\n`;
+              }
+              markdown += `### Scene Beats\n\n`;
+
+              // Ensure sceneBeats is an array before iterating
+              const currentBeats = Array.isArray(chapter.sceneBeats)
+                ? chapter.sceneBeats
+                : [];
+              currentBeats.forEach((beat, beatIndex) => {
+                markdown += `#### Beat ${beatIndex + 1}\n\n`;
+                markdown += `**Scene Description:**\n${beat.text || ""}\n\n`;
+                markdown += `**Generated Content:**\n${
+                  beat.generatedText || ""
+                }\n\n`;
+              });
+            });
+
+            copyToClipboard(markdown.trim()).then(resolve).catch(reject);
+          });
+        };
+
+        const handleImportNovel = (text) => {
+          try {
+            const novel = {
+              id: generateId(),
+              title: "Imported Novel",
+              template: null,
+              chapters: [],
+            };
+
+            const lines = text.split("\n");
+            let currentChapter = null;
+            let currentBeat = null;
+            let readingMode = null; // null | 'summary' | 'description' | 'generated' | 'template'
+            let accumulatingText = "";
+
+            lines.forEach((line) => {
+              const trimmedLine = line.trim();
+
+              if (trimmedLine.startsWith("# ")) {
+                finishAccumulatingText();
+                novel.title = trimmedLine.substring(2).trim();
+                readingMode = null;
+              } else if (trimmedLine.startsWith("## ")) {
+                finishAccumulatingText();
+                currentChapter = {
+                  id: generateId(),
+                  title: trimmedLine.substring(3).trim(),
+                  summary: "",
+                  sceneBeats: [],
+                };
+                novel.chapters.push(currentChapter);
+                currentBeat = null;
+                readingMode = null;
+              } else if (trimmedLine === "### Template") {
+                finishAccumulatingText();
+                readingMode = "template";
+              } else if (trimmedLine === "### Summary" && currentChapter) {
+                finishAccumulatingText();
+                readingMode = "summary";
+              } else if (trimmedLine === "### Scene Beats" && currentChapter) {
+                finishAccumulatingText();
+                readingMode = null;
+              } else if (
+                trimmedLine.startsWith("#### Beat") &&
+                currentChapter
+              ) {
+                finishAccumulatingText();
+                currentBeat = { id: generateId(), text: "", generatedText: "" };
+                currentChapter.sceneBeats.push(currentBeat);
+                readingMode = null;
+              } else if (
+                trimmedLine === "**Scene Description:**" &&
+                currentBeat
+              ) {
+                finishAccumulatingText();
+                readingMode = "description";
+              } else if (
+                trimmedLine === "**Generated Content:**" &&
+                currentBeat
+              ) {
+                finishAccumulatingText();
+                readingMode = "generated";
+              } else {
+                accumulatingText += line + "\n";
+              }
+            });
+
+            finishAccumulatingText(); // Finish last section
+
+            function finishAccumulatingText() {
+              const content = accumulatingText.trim();
+              if (readingMode === "template") {
+                novel.template =
+                  content && content !== DEFAULT_PROMPT_TEMPLATE
+                    ? content
+                    : null;
+              } else if (readingMode === "summary" && currentChapter) {
+                currentChapter.summary = content;
+              } else if (readingMode === "description" && currentBeat) {
+                currentBeat.text = content;
+              } else if (readingMode === "generated" && currentBeat) {
+                currentBeat.generatedText = content;
+              }
+              accumulatingText = "";
+            }
+
+            if (
+              !novel.title ||
+              ((!Array.isArray(novel.chapters) ||
+                novel.chapters.length === 0) &&
+                !novel.template)
+            ) {
+              console.warn("Imported text might be incomplete or invalid.");
+            }
+
+            // Ensure imported chapters/beats have arrays if empty
+            if (Array.isArray(novel.chapters)) {
+              novel.chapters.forEach((ch) => {
+                ch.sceneBeats = Array.isArray(ch.sceneBeats)
+                  ? ch.sceneBeats
+                  : [];
+              });
+            } else {
+              novel.chapters = [];
+            }
+
+            updateNovels((prev) => [...prev, novel]);
+            alert(`Novel "${novel.title}" imported successfully!`);
+          } catch (e) {
+            console.error("Import error:", e);
+            alert(
+              "Error importing novel. Please check the format.\n\n" + e.message
+            );
+          }
+        };
+
+        // --- Current Novel Data (Memoized) ---
+        const currentNovel = useMemo(() => {
+          // Ensure novels is an array before finding
+          if (!Array.isArray(novels)) return null;
+          return novels.find((n) => n.id === currentNovelId) || null;
+        }, [novels, currentNovelId]);
+
+        // --- Render Logic ---
+        return (
+          <div className="container">
+            <h1>AI-Assisted Novel Editor (React)</h1>
+
+            {currentView === "list" && (
+              <NovelListView
+                novels={novels}
+                onCreateNovel={handleCreateNovel}
+                onOpenNovel={handleOpenNovel}
+                onDeleteNovel={handleDeleteNovel}
+                onImportNovel={handleImportNovel}
+              />
+            )}
+
+            {currentView === "editor" && currentNovel && (
+              <NovelEditorView
+                novel={currentNovel}
+                onBack={handleBackToList}
+                onUpdateNovel={handleUpdateNovel}
+                onDeleteNovel={handleDeleteNovel}
+                onAddChapter={handleAddChapter}
+                onDeleteChapter={handleDeleteChapter}
+                onMoveChapter={handleMoveChapter}
+                onUpdateChapterTitle={handleUpdateChapterTitle}
+                onAddBeat={handleAddBeat}
+                onDeleteBeat={handleDeleteBeat}
+                onMoveBeat={handleMoveBeat}
+                onUpdateBeatText={handleUpdateBeatText}
+                onUpdateGeneratedText={handleUpdateGeneratedText}
+                onUpdateChapterSummary={handleUpdateChapterSummary}
+                onExportNovel={handleExportNovel}
+                onShowPrompt={handleShowPrompt}
+                onShowTemplateEditor={handleShowTemplateEditor}
+                summaryCollapseStates={summaryCollapseStates}
+                onToggleSummaryCollapse={handleToggleSummaryCollapse}
+                onCopySummaryPrompt={handleCopySummaryPrompt}
+              />
+            )}
+
+            {/* Render Modals */}
+            {/* ****** FIXED HERE ****** */}
+            {/* Replace modalContent?.type with modalContent && modalContent.type */}
+            {modalContent && modalContent.type === "prompt" && (
+              <PromptModal
+                // Ensure data exists before accessing text
+                promptText={modalContent.data && modalContent.data.text}
+                onClose={handleCloseModal}
+                onCopy={handleCopyPromptFromModal}
+              />
+            )}
+            {/* Replace modalContent?.type with modalContent && modalContent.type */}
+            {modalContent && modalContent.type === "template" && (
+              <TemplateEditorModal
+                // Ensure data exists before accessing properties
+                novelId={modalContent.data && modalContent.data.novelId}
+                currentTemplate={
+                  modalContent.data && modalContent.data.currentTemplate
+                }
+                onClose={handleCloseModal}
+                onSave={handleSaveTemplate}
+                defaultTemplate={DEFAULT_PROMPT_TEMPLATE}
+              />
+            )}
+            {/* ****** END FIX ****** */}
+          </div>
+        );
+      }
+
+      // --- Specific Modal Components ---
+      function PromptModal({ promptText, onClose, onCopy }) {
+        const [copyFeedback, setCopyFeedback] = useState(""); // "Copied", "Error"
+
+        const handleCopy = () => {
+          onCopy(promptText)
+            .then(() => {
+              setCopyFeedback("Copied!");
+              setTimeout(() => setCopyFeedback(""), 1500);
+            })
+            .catch((err) => {
+              console.error("Copy failed:", err);
+              setCopyFeedback("Error");
+              setTimeout(() => setCopyFeedback(""), 1500);
+            });
+        };
+
+        return (
+          <Modal
+            title="Scene Beat Prompt"
+            onClose={onClose}
+            footer={
+              <React.Fragment>
+                <button onClick={handleCopy} disabled={!!copyFeedback}>
+                  {copyFeedback || "Copy to Clipboard"}
+                </button>
+                <button className="secondary-btn" onClick={onClose}>
+                  Close
+                </button>
+              </React.Fragment>
+            }
+          >
+            <textarea
+              className="prompt-textarea"
+              value={promptText || ""} // Ensure value is not null/undefined
+              readOnly
+            />
+          </Modal>
+        );
+      }
+
+      function TemplateEditorModal({
+        novelId,
+        currentTemplate,
+        onClose,
+        onSave,
+        defaultTemplate,
+      }) {
+        const [templateText, setTemplateText] = useState(currentTemplate || ""); // Ensure value is not null/undefined
+        const [saveFeedback, setSaveFeedback] = useState("");
+
+        useEffect(() => {
+          setTemplateText(currentTemplate || ""); // Update if prop changes while open
+        }, [currentTemplate]);
+
+        const handleSave = () => {
+          onSave(novelId, templateText);
+          // Feedback handled by caller for simplicity now, could add internal feedback too
+          // setSaveFeedback("Saved!");
+          // setTimeout(() => setSaveFeedback(""), 1500);
+        };
+
+        const handleReset = () => {
+          if (
+            confirm(
+              "Are you sure you want to reset the template in the editor to the default? This won't save until you click 'Save Template'."
+            )
+          ) {
+            setTemplateText(defaultTemplate);
+          }
+        };
+
+        return (
+          <Modal
+            title="Edit Continue Prompt Template"
+            onClose={onClose}
+            footer={
+              <React.Fragment>
+                <button onClick={handleSave} disabled={!!saveFeedback}>
+                  {saveFeedback || "Save Template"}
+                </button>
+                <button className="secondary-btn" onClick={handleReset}>
+                  Reset to Default
+                </button>
+                <button className="secondary-btn" onClick={onClose}>
+                  Close
+                </button>
+              </React.Fragment>
+            }
+          >
+            <textarea
+              id="templateTextarea"
+              className="prompt-textarea"
+              value={templateText}
+              onChange={(e) => setTemplateText(e.target.value)}
+            />
+            <div className="template-help">
+              <p>Use these placeholders:</p>
+              <ul>
+                <li>
+                  <code>{"{storySoFar}"}</code> - Context from previous
+                  chapters/beats.
+                </li>
+                <li>
+                  <code>{"{instructions}"}</code> - The text from the current
+                  scene beat description.
+                </li>
+              </ul>
+            </div>
+          </Modal>
+        );
+      }
+
+      // --- Render the App ---
+      const root = ReactDOM.createRoot(document.getElementById("root"));
+      root.render(<App />);
     </script>
   </body>
 </html>
