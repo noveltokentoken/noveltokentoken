@@ -473,6 +473,7 @@ STOP EARLY if the continuation contains what was required in the instructions. Y
         onDeleteBeat,
         onMoveBeat,
         onShowPrompt,
+        onEditBeat,
       }) {
         return (
           <div className="scene-beat">
@@ -504,6 +505,9 @@ STOP EARLY if the continuation contains what was required in the instructions. Y
                 disabled={beatIndex === totalBeats - 1}
               >
                 ↓
+              </button>
+              <button onClick={() => onEditBeat(novelId, chapterId, beat.id)}>
+                Edit
               </button>
               <button onClick={() => onShowPrompt(novelId, chapterId, beat.id)}>
                 Show Prompt
@@ -614,6 +618,7 @@ STOP EARLY if the continuation contains what was required in the instructions. Y
         onToggleSummaryCollapse,
         onUpdateChapterSummary,
         onCopySummaryPrompt,
+        onEditBeat,
       }) {
         const [newBeatText, setNewBeatText] = useState("");
 
@@ -681,6 +686,7 @@ STOP EARLY if the continuation contains what was required in the instructions. Y
                     onDeleteBeat={onDeleteBeat}
                     onMoveBeat={onMoveBeat}
                     onShowPrompt={onShowPrompt}
+                    onEditBeat={onEditBeat}
                   />
                 ))
               )}
@@ -736,6 +742,7 @@ STOP EARLY if the continuation contains what was required in the instructions. Y
         summaryCollapseStates,
         onToggleSummaryCollapse,
         onCopySummaryPrompt,
+        onEditBeat,
       }) {
         const [exportFeedback, setExportFeedback] = useState(false);
         const [chapterFilter, setChapterFilter] = useState("all");
@@ -835,19 +842,17 @@ STOP EARLY if the continuation contains what was required in the instructions. Y
                         onDeleteBeat={onDeleteBeat}
                         onMoveBeat={onMoveBeat}
                         onShowPrompt={onShowPrompt}
-                        // ****** FIXED HERE ******
                         isSummaryCollapsed={
-                          // Replace summaryCollapseStates[chapter.id] ?? true
                           typeof summaryCollapseStates[chapter.id] !==
                             "undefined" &&
                           summaryCollapseStates[chapter.id] !== null
                             ? summaryCollapseStates[chapter.id]
                             : true // Default collapsed
                         }
-                        // ****** END FIX ******
                         onToggleSummaryCollapse={onToggleSummaryCollapse}
                         onUpdateChapterSummary={onUpdateChapterSummary}
                         onCopySummaryPrompt={onCopySummaryPrompt}
+                        onEditBeat={onEditBeat}
                       />
                     );
                   })
@@ -1272,6 +1277,33 @@ STOP EARLY if the continuation contains what was required in the instructions. Y
               return n;
             })
           );
+        };
+
+        // New Edit Beat function
+        const handleEditBeat = (novelId, chapterId, beatId) => {
+          const novel = novels.find(n => n.id === novelId);
+          if (!novel || !Array.isArray(novel.chapters)) return;
+          
+          const chapter = novel.chapters.find(ch => ch.id === chapterId);
+          if (!chapter || !Array.isArray(chapter.sceneBeats)) return;
+          
+          const beat = chapter.sceneBeats.find(b => b.id === beatId);
+          if (!beat) return;
+          
+          setModalContent({
+            type: "editBeat",
+            data: {
+              novelId,
+              chapterId,
+              beatId,
+              text: beat.text || ""
+            }
+          });
+        };
+        
+        const handleSaveBeatEdit = (novelId, chapterId, beatId, newText) => {
+          handleUpdateBeatText(novelId, chapterId, beatId, newText);
+          handleCloseModal();
         };
 
         const handleDeleteBeat = (novelId, chapterId, beatId) => {
@@ -1775,7 +1807,6 @@ STOP EARLY if the continuation contains what was required in the instructions. Y
             }
 
             updateNovels((prev) => [...prev, novel]);
-            alert(`Novel "${novel.title}" imported successfully!`);
           } catch (e) {
             console.error("Import error:", e);
             alert(
@@ -1794,7 +1825,7 @@ STOP EARLY if the continuation contains what was required in the instructions. Y
         // --- Render Logic ---
         return (
           <div className="container">
-            <h1>AI-Assisted Novel Editor (React)</h1>
+            <h1>NovelTokenToken</h1>
 
             {currentView === "list" && (
               <NovelListView
@@ -1828,6 +1859,7 @@ STOP EARLY if the continuation contains what was required in the instructions. Y
                 summaryCollapseStates={summaryCollapseStates}
                 onToggleSummaryCollapse={handleToggleSummaryCollapse}
                 onCopySummaryPrompt={handleCopySummaryPrompt}
+                onEditBeat={handleEditBeat}
               />
             )}
 
@@ -1861,6 +1893,18 @@ STOP EARLY if the continuation contains what was required in the instructions. Y
                 exportText={modalContent.data && modalContent.data.text}
                 onClose={handleCloseModal}
                 onCopy={handleCopyPromptFromModal}
+              />
+            )}
+            {modalContent && modalContent.type === "editBeat" && (
+              <EditBeatModal
+                beatText={modalContent.data && modalContent.data.text}
+                onClose={handleCloseModal}
+                onSave={(editedText) => handleSaveBeatEdit(
+                  modalContent.data.novelId,
+                  modalContent.data.chapterId,
+                  modalContent.data.beatId,
+                  editedText
+                )}
               />
             )}
           </div>
@@ -2014,6 +2058,35 @@ STOP EARLY if the continuation contains what was required in the instructions. Y
               className="prompt-textarea"
               value={exportText || ""}
               readOnly
+            />
+          </Modal>
+        );
+      }
+
+      // --- Edit Beat Modal Component ---
+      function EditBeatModal({ beatText, onClose, onSave }) {
+        const [editedText, setEditedText] = useState(beatText || "");
+        
+        const handleSave = () => {
+          onSave(editedText);
+        };
+
+        return (
+          <Modal
+            title="Edit Scene Beat Instruction"
+            onClose={onClose}
+            footer={
+              <React.Fragment>
+                <button onClick={handleSave}>Save Changes</button>
+                <button className="secondary-btn" onClick={onClose}>Cancel</button>
+              </React.Fragment>
+            }
+          >
+            <textarea
+              className="prompt-textarea"
+              value={editedText}
+              onChange={(e) => setEditedText(e.target.value)}
+              placeholder="Enter scene beat instruction..."
             />
           </Modal>
         );
