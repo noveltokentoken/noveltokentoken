@@ -368,10 +368,6 @@
           <input type="text" id="newNovelTitle" placeholder="New Novel Title" />
           <button onclick="createNovel()">Create New Novel</button>
           <button onclick="toggleImportArea()">Import Novel</button>
-          <button class="secondary-btn" onclick="showSettings()">
-            ⚙️ Settings
-          </button>
-          <!-- Settings Button -->
         </div>
         <div class="import-area">
           <textarea
@@ -414,36 +410,6 @@
         </div>
 
         <button onclick="addChapter()">+ Add New Chapter</button>
-      </div>
-
-      <!-- Settings View -->
-      <div id="settingsView" style="display: none">
-        <button onclick="hideSettings()">← Back to Novel List</button>
-        <h2>Settings</h2>
-        <h3>Continue Prompt Template</h3>
-        <div class="template-help">
-          Edit the template used for the "Copy Continue Prompt" button. Use the
-          following placeholders:
-          <ul>
-            <li>
-              <code>{storySoFar}</code>: Automatically replaced with summaries
-              of previous chapters and the text of previous beats in the current
-              chapter.
-            </li>
-            <li>
-              <code>{instructions}</code>: Automatically replaced with the text
-              of the current scene beat.
-            </li>
-          </ul>
-        </div>
-        <textarea id="promptTemplateTextarea"></textarea>
-        <div>
-          <button onclick="saveTemplateSettings()">Save Template</button>
-          <button class="secondary-btn" onclick="resetTemplateToDefault()">
-            Reset to Default
-          </button>
-          <span class="feedback" id="settingsFeedback">Saved!</span>
-        </div>
       </div>
 
       <!-- Prompt Modal Dialog -->
@@ -888,12 +854,6 @@ STOP EARLY if the continuation contains what was required in the instructions. Y
         showView("novelEditorView");
         renderNovelEditor();
         updateChapterFilter(); // Update the chapter filter dropdown
-      }
-
-      function showSettings() {
-        showView("settingsView");
-        document.getElementById("promptTemplateTextarea").value =
-          getPromptTemplate();
       }
 
       function hideSettings() {
