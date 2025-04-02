@@ -516,8 +516,9 @@ STOP EARLY if the continuation contains what was required in the instructions. Y
                 borderRadius: "4px",
                 minHeight: "60px",
                 whiteSpace: "pre-wrap",
-                width: "100%", /* Make full width */
-                boxSizing: "border-box", /* Include padding in width calculation */
+                width: "100%" /* Make full width */,
+                boxSizing:
+                  "border-box" /* Include padding in width calculation */,
               }}
             >
               {beat.text || ""}
@@ -1821,32 +1822,34 @@ STOP EARLY if the continuation contains what was required in the instructions. Y
           return new Promise((resolve, reject) => {
             const novel = novels.find((n) => n.id === novelId);
             if (!novel) return reject(new Error("Novel not found"));
-            
+
             let novelText = `${novel.title || "Untitled Novel"}\n\n`;
-            
+
             const currentChapters = Array.isArray(novel.chapters)
               ? novel.chapters
               : [];
-              
+
             currentChapters.forEach((chapter, chapterIndex) => {
-              novelText += `${chapter.title || `Chapter ${chapterIndex + 1}`}\n\n`;
-              
+              novelText += `${
+                chapter.title || `Chapter ${chapterIndex + 1}`
+              }\n\n`;
+
               const currentBeats = Array.isArray(chapter.sceneBeats)
                 ? chapter.sceneBeats
                 : [];
-                
+
               const chapterContent = currentBeats
                 .map((beat) => beat.generatedText || "")
                 .filter(Boolean)
                 .join("\n\n");
-                
+
               novelText += `${chapterContent}\n\n`;
             });
-            
+
             resolve(novelText.trim());
           });
         };
-        
+
         // --- Handle View Novel Text (trigger for the new view text modal) ---
         const handleViewNovelText = (novelId) => {
           generateNovelText(novelId)
@@ -1858,7 +1861,7 @@ STOP EARLY if the continuation contains what was required in the instructions. Y
               alert("Error generating novel text. See console for details.");
             });
         };
-        
+
         // --- Current Novel Data ---
         const currentNovel = useMemo(() => {
           if (!Array.isArray(novels)) return null;
@@ -2178,7 +2181,7 @@ STOP EARLY if the continuation contains what was required in the instructions. Y
 
       function NovelTextModal({ novelText, onClose, onCopy }) {
         const [copyFeedback, setCopyFeedback] = useState(false);
-        
+
         const handleCopy = () => {
           onCopy(novelText)
             .then(() => {
@@ -2190,7 +2193,7 @@ STOP EARLY if the continuation contains what was required in the instructions. Y
               alert("Failed to copy. See console for details.");
             });
         };
-        
+
         return (
           <Modal
             title="Novel Text"
@@ -2215,7 +2218,7 @@ STOP EARLY if the continuation contains what was required in the instructions. Y
                   padding: "15px",
                   backgroundColor: "#fcfcfc",
                   border: "1px solid #eee",
-                  borderRadius: "4px"
+                  borderRadius: "4px",
                 }}
               >
                 {novelText || "No content available"}
