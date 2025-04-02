@@ -148,21 +148,14 @@
       }
 
       /* Display beat text as static paragraph */
-      <p
-        className="beat-text-area"
-        style={{
-          padding: "8px",
-          backgroundColor: "#f5f5f5",
-          borderRadius: "4px",
-          minHeight: "60px",
-          whiteSpace: "pre-wrap",
-          width: "100%", /* Make full width */
-          boxSizing: "border-box", /* Include padding in width calculation */
-        }}
-      >
-      </p>
-
       .beat-text-area {
+        padding: 8px;
+        background-color: #f5f5f5;
+        border-radius: 4px;
+        min-height: 60px;
+        white-space: pre-wrap;
+        width: 100%; /* Make full width */
+        box-sizing: border-box; /* Include padding in width calculation */
         min-height: 40px;
       }
 
@@ -792,7 +785,8 @@ STOP EARLY if the continuation contains what was required in the instructions. Y
         onToggleSummaryCollapse,
         onCopySummaryPrompt,
         onEditBeat,
-        onShowEditGeneratedTextModal, // **** NEW PROP ****
+        onShowEditGeneratedTextModal,
+        handleViewNovelText,
       }) {
         const [exportFeedback, setExportFeedback] = useState(false);
         const [chapterFilter, setChapterFilter] = useState("all");
@@ -833,6 +827,9 @@ STOP EARLY if the continuation contains what was required in the instructions. Y
               <button onClick={handleExport}>Export Novel</button>
               <button onClick={() => onShowTemplateEditor(novel.id)}>
                 Edit Continue Prompt Template
+              </button>
+              <button onClick={() => handleViewNovelText(novel.id)}>
+                View Novel Text
               </button>
               <div className="feedback-container">
                 <FeedbackMessage show={exportFeedback} />
@@ -1819,6 +1816,49 @@ STOP EARLY if the continuation contains what was required in the instructions. Y
           }
         };
 
+        // --- Generate clean novel text (content only, no instructions or summaries) ---
+        const generateNovelText = (novelId) => {
+          return new Promise((resolve, reject) => {
+            const novel = novels.find((n) => n.id === novelId);
+            if (!novel) return reject(new Error("Novel not found"));
+            
+            let novelText = `${novel.title || "Untitled Novel"}\n\n`;
+            
+            const currentChapters = Array.isArray(novel.chapters)
+              ? novel.chapters
+              : [];
+              
+            currentChapters.forEach((chapter, chapterIndex) => {
+              novelText += `${chapter.title || `Chapter ${chapterIndex + 1}`}\n\n`;
+              
+              const currentBeats = Array.isArray(chapter.sceneBeats)
+                ? chapter.sceneBeats
+                : [];
+                
+              const chapterContent = currentBeats
+                .map((beat) => beat.generatedText || "")
+                .filter(Boolean)
+                .join("\n\n");
+                
+              novelText += `${chapterContent}\n\n`;
+            });
+            
+            resolve(novelText.trim());
+          });
+        };
+        
+        // --- Handle View Novel Text (trigger for the new view text modal) ---
+        const handleViewNovelText = (novelId) => {
+          generateNovelText(novelId)
+            .then((novelText) => {
+              setModalContent({ type: "novelText", data: { text: novelText } });
+            })
+            .catch((err) => {
+              console.error("Error generating novel text:", err);
+              alert("Error generating novel text. See console for details.");
+            });
+        };
+        
         // --- Current Novel Data ---
         const currentNovel = useMemo(() => {
           if (!Array.isArray(novels)) return null;
@@ -1863,7 +1903,8 @@ STOP EARLY if the continuation contains what was required in the instructions. Y
                 onToggleSummaryCollapse={handleToggleSummaryCollapse}
                 onCopySummaryPrompt={handleCopySummaryPrompt}
                 onEditBeat={handleEditBeat} // Pass down edit beat trigger
-                onShowEditGeneratedTextModal={handleShowEditGeneratedTextModal} // **** PASS DOWN ****
+                onShowEditGeneratedTextModal={handleShowEditGeneratedTextModal}
+                handleViewNovelText={handleViewNovelText} // Pass the function that shows the novel text modal
               />
             )}
 
@@ -1923,6 +1964,13 @@ STOP EARLY if the continuation contains what was required in the instructions. Y
                     editedText
                   )
                 }
+              />
+            )}
+            {modalContent && modalContent.type === "novelText" && (
+              <NovelTextModal
+                novelText={modalContent.data && modalContent.data.text}
+                onClose={handleCloseModal}
+                onCopy={handleCopyPromptFromModal}
               />
             )}
           </div>
@@ -2124,6 +2172,55 @@ STOP EARLY if the continuation contains what was required in the instructions. Y
               placeholder="Edit the generated content..."
               autoFocus // Focus textarea on open
             />
+          </Modal>
+        );
+      }
+
+      function NovelTextModal({ novelText, onClose, onCopy }) {
+        const [copyFeedback, setCopyFeedback] = useState(false);
+        
+        const handleCopy = () => {
+          onCopy(novelText)
+            .then(() => {
+              setCopyFeedback(true);
+              setTimeout(() => setCopyFeedback(false), 1500);
+            })
+            .catch((err) => {
+              console.error("Copy failed:", err);
+              alert("Failed to copy. See console for details.");
+            });
+        };
+        
+        return (
+          <Modal
+            title="Novel Text"
+            onClose={onClose}
+            footer={
+              <React.Fragment>
+                <button onClick={handleCopy} disabled={copyFeedback}>
+                  {copyFeedback ? "Copied!" : "Copy to Clipboard"}
+                </button>
+                <button className="secondary-btn" onClick={onClose}>
+                  Close
+                </button>
+              </React.Fragment>
+            }
+          >
+            <div style={{ maxHeight: "70vh", overflow: "auto" }}>
+              <div
+                style={{
+                  whiteSpace: "pre-wrap",
+                  fontFamily: "serif",
+                  lineHeight: "1.6",
+                  padding: "15px",
+                  backgroundColor: "#fcfcfc",
+                  border: "1px solid #eee",
+                  borderRadius: "4px"
+                }}
+              >
+                {novelText || "No content available"}
+              </div>
+            </div>
           </Modal>
         );
       }
