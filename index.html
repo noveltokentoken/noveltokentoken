@@ -873,11 +873,7 @@ NEVER conclude the scene on your own, follow the beat instructions very closely.
 STOP EARLY if the continuation contains what was required in the instructions. You do not need to fill out the full amount of words possible.
 
 - Do not use bold or italic font.
-- Do not use expressions like "mechanical precision," "with rapid efficiency," or "at a steady pace", "her stride controlled, efficient", "this is not ideal".
-- CT32F, from whose perspective the story is told, cannot feel or detect emotions in others. She cannot feel pain. She cannot assess things like beauty, nor does she feel the wind or cold.
-- Do not measure parameters of the environment or mention these numbers.
-- Write in active voice. Use British, American, Scientific, International, and Commercial English (Basic English) for everything except dialogues. For dialogues, use the language that ordinary people in the 1980x would use.
-- Use sarcasm and dry humor. Make sarcastic jokes in the internal monologue.`;
+- Write in active voice.`;
 
       // --- Helper Functions ---
       function generateId() {
@@ -949,13 +945,12 @@ STOP EARLY if the continuation contains what was required in the instructions. Y
         beat,
         beatIndex,
         totalBeats,
-        // onUpdateBeatText, // Replaced by onEditBeat trigger
-        onUpdateGeneratedText, // Still needed for clear
+        onUpdateGeneratedText,
         onDeleteBeat,
         onMoveBeat,
         onShowPrompt,
         onEditBeat,
-        onShowEditGeneratedTextModal, // **** NEW PROP ****
+        onShowEditGeneratedTextModal,
       }) {
         return (
           <div className="scene-beat">
@@ -1395,12 +1390,8 @@ STOP EARLY if the continuation contains what was required in the instructions. Y
               </button>
             </div>
             {/* === End Header Container === */}
-            {/* Remove the old separate filter/export divs if they only contained the above */}
-            {/* <div className="import-export-area"> ... MOVED ... </div> */}
-            {/* <div className="chapter-filter"> ... MOVED ... </div> */}
-            <hr /> {/* Keep the separator */}
+            <hr />
             <div id="chaptersContainer">
-              {/* ... rest of the chapter mapping logic ... */}
               {filteredChapters.length === 0 &&
                 chapterFilter !== "all" &&
                 novel.chapters.length > 0 && (
@@ -2136,7 +2127,6 @@ STOP EARLY if the continuation contains what was required in the instructions. Y
           setModalContent({ type: "export", data: { text: exportText } });
         };
 
-        // **** NEW: Trigger Edit Generated Text Modal ****
         const handleShowEditGeneratedTextModal = (
           novelId,
           chapterId,
