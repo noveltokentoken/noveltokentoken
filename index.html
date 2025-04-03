@@ -697,6 +697,145 @@
         overflow-y: auto;
         padding: 5px; /* Padding around the scrollable area */
       }
+
+      /* --- Novel Editor View Header --- */
+      .novel-editor-header {
+        display: flex;
+        align-items: center;
+        flex-wrap: wrap; /* Allow wrapping on small screens */
+        gap: 12px; /* Adjust spacing between elements */
+        margin-bottom: 20px; /* Space below the header */
+        padding: 10px; /* Optional padding around the header */
+        background-color: var(
+          --light-bg
+        ); /* Light background for the header area */
+        border-radius: var(--border-radius);
+        border: 1px solid var(--border-color);
+      }
+
+      .novel-editor-header .back-button {
+        flex-shrink: 0; /* Prevent back button from shrinking */
+        padding: 8px 10px; /* Slightly smaller padding */
+      }
+
+      /* Adjust Novel Title Input for Header */
+      .novel-editor-header .novel-title-edit {
+        flex-grow: 1; /* Allow title to take up available space */
+        margin: 0; /* Remove default margin */
+        min-width: 200px; /* Ensure minimum width for title */
+      }
+      .novel-editor-header .novel-title-edit input[type="text"] {
+        font-size: 1.3em; /* Slightly smaller in header */
+        font-weight: 600;
+        padding: 8px 12px; /* Adjust padding */
+        margin-bottom: 0; /* Remove bottom margin */
+        border: 1px solid var(--border-color); /* Add subtle border */
+        background-color: var(--container-bg); /* White background */
+        box-shadow: none;
+      }
+      .novel-editor-header .novel-title-edit input[type="text"]:focus {
+        border-color: var(--primary-color); /* Keep focus style */
+        box-shadow: 0 0 0 2px rgba(79, 70, 229, 0.3);
+        background-color: var(--container-bg);
+      }
+
+      /* Group Action Buttons */
+      .novel-editor-header .action-buttons {
+        display: flex;
+        align-items: center;
+        gap: 8px; /* Space between action buttons */
+        flex-shrink: 0; /* Prevent buttons shrinking too much */
+      }
+      .novel-editor-header .action-buttons button {
+        padding: 8px 10px; /* Make buttons slightly smaller */
+        font-size: 0.85rem;
+        white-space: nowrap; /* Prevent text wrapping inside button */
+      }
+
+      /* Group Chapter Filter */
+      .novel-editor-header .chapter-filter-group {
+        display: flex;
+        align-items: center;
+        gap: 5px; /* Space between label and select */
+        flex-shrink: 0;
+      }
+      .novel-editor-header .chapter-filter-group label {
+        font-size: 0.9em;
+        color: var(--text-color-light);
+        margin: 0;
+      }
+      .novel-editor-header .chapter-filter-group select {
+        padding: 7px 10px; /* Adjust padding */
+        font-size: 0.9em;
+        min-width: 150px; /* Adjust as needed */
+      }
+
+      /* Push Delete Button to the Right */
+      .novel-editor-header .delete-novel-btn {
+        margin-left: auto; /* Magic! Pushes it to the end */
+        flex-shrink: 0;
+        padding: 8px 10px; /* Match other header buttons */
+        font-size: 0.85rem;
+      }
+
+      /* Remove original containers if they are now empty */
+      .import-export-area,
+      .chapter-filter {
+        /* If you moved *all* content out, you can potentially remove these selectors */
+        /* Otherwise, adjust their styles if they still contain other items */
+        margin: 0; /* Reset margin if needed */
+        padding: 0; /* Reset padding if needed */
+        background: none; /* Reset background if needed */
+        border: none; /* Reset border if needed */
+      }
+
+      /* Responsive Button Text (Optional but recommended) */
+      .button-text-desktop {
+        display: inline;
+      }
+      .button-text-mobile {
+        display: none;
+      }
+
+      @media (max-width: 900px) {
+        /* Adjust breakpoint as needed */
+        .button-text-desktop {
+          display: none;
+        }
+        .button-text-mobile {
+          display: inline;
+        }
+        .novel-editor-header .novel-title-edit input[type="text"] {
+          font-size: 1.2em; /* Slightly smaller title on mobile */
+        }
+        .novel-editor-header .action-buttons button,
+        .novel-editor-header .back-button,
+        .novel-editor-header .delete-novel-btn {
+          padding: 8px; /* Icon only padding */
+        }
+        .novel-editor-header .action-buttons button svg,
+        .novel-editor-header .delete-novel-btn svg {
+          margin-right: 0; /* No margin when text is hidden */
+        }
+      }
+      @media (max-width: 680px) {
+        /* Example: Further reduction */
+        .novel-editor-header {
+          gap: 8px; /* Reduce gap more */
+        }
+        .novel-editor-header .novel-title-edit {
+          min-width: 150px; /* Allow title to be smaller */
+        }
+        .novel-editor-header .chapter-filter-group select {
+          min-width: 120px;
+        }
+        .novel-editor-header .back-button span {
+          display: none; /* Hide "Back" text */
+        }
+        .novel-editor-header .back-button {
+          padding: 8px;
+        }
+      }
     </style>
   </head>
   <body>
@@ -966,7 +1105,6 @@ STOP EARLY if the continuation contains what was required in the instructions. Y
         onDeleteChapter,
         onMoveChapter,
         onAddBeat,
-        // onUpdateBeatText, // Removed - handled by modal now
         onUpdateGeneratedText,
         onDeleteBeat,
         onMoveBeat,
@@ -976,7 +1114,8 @@ STOP EARLY if the continuation contains what was required in the instructions. Y
         onUpdateChapterSummary,
         onCopySummaryPrompt,
         onEditBeat,
-        onShowEditGeneratedTextModal, // **** NEW PROP ****
+        onShowEditGeneratedTextModal,
+        summaryCollapseStates,
       }) {
         const [newBeatText, setNewBeatText] = useState("");
 
@@ -1081,20 +1220,16 @@ STOP EARLY if the continuation contains what was required in the instructions. Y
         onBack,
         onUpdateNovel,
         onDeleteNovel,
-        // Chapter Actions
         onAddChapter,
         onDeleteChapter,
         onMoveChapter,
         onUpdateChapterTitle,
-        // Beat Actions
         onAddBeat,
         onDeleteBeat,
         onMoveBeat,
-        onUpdateBeatText, // Still needed for saving edit beat modal
-        onUpdateGeneratedText, // Needed for clear & saving edit gen text modal
-        // Summary Actions
+        onUpdateBeatText,
+        onUpdateGeneratedText,
         onUpdateChapterSummary,
-        // Other
         onExportNovel,
         onShowPrompt,
         onShowTemplateEditor,
@@ -1121,6 +1256,7 @@ STOP EARLY if the continuation contains what was required in the instructions. Y
         };
 
         const filteredChapters = useMemo(() => {
+          // ... (filtering logic remains the same)
           if (chapterFilter === "all") {
             return novel.chapters;
           }
@@ -1129,53 +1265,140 @@ STOP EARLY if the continuation contains what was required in the instructions. Y
 
         return (
           <div className="view" id="novelEditorView">
-            <button onClick={onBack}>← Back to Novel List</button>
-            <div className="novel-title-edit">
-              <input
-                type="text"
-                id="editNovelTitle"
-                value={novel.title || ""}
-                onChange={(e) =>
-                  onUpdateNovel(novel.id, { title: e.target.value })
-                }
-              />
-            </div>
-            <div className="import-export-area">
-              <button onClick={handleExport}>Export Novel</button>
-              <button onClick={() => onShowTemplateEditor(novel.id)}>
-                Edit Continue Prompt Template
+            {/* === NEW Header Container === */}
+            <div className="novel-editor-header">
+              <button onClick={onBack} className="back-button">
+                ← <span className="button-text-desktop">Back to List</span>{" "}
+                {/* Hide text on mobile? */}
               </button>
-              <button onClick={() => handleViewNovelText(novel.id)}>
-                View Novel Text
-              </button>
-              <div className="feedback-container">
-                <FeedbackMessage show={exportFeedback} />
-              </div>
-            </div>
-            <div className="chapter-filter">
-              <label htmlFor="chapterFilter">Show chapter: </label>
-              <select
-                id="chapterFilter"
-                value={chapterFilter}
-                onChange={(e) => setChapterFilter(e.target.value)}
-              >
-                <option value="all">All Chapters</option>
-                {novel.chapters.map((ch, index) => (
-                  <option key={ch.id} value={ch.id}>
-                    {ch.title || `Chapter ${index + 1}`}
-                  </option>
-                ))}
-              </select>
-            </div>
-            <button
-              className="delete-btn"
-              onClick={() => onDeleteNovel(novel.id)}
-            >
-              Delete This Novel
-            </button>
-            <hr />
 
+              {/* Novel Title Input stays within its div for potential specific styling */}
+              <div className="novel-title-edit">
+                <input
+                  type="text"
+                  id="editNovelTitle"
+                  value={novel.title || ""}
+                  onChange={(e) =>
+                    onUpdateNovel(novel.id, { title: e.target.value })
+                  }
+                  placeholder="Novel Title" // Add placeholder
+                />
+              </div>
+
+              {/* Action Buttons Group */}
+              <div className="action-buttons">
+                <button onClick={handleExport} title="Export Novel">
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    viewBox="0 0 20 20"
+                    fill="currentColor"
+                    width="16"
+                    height="16"
+                    style={{ verticalAlign: "middle", marginRight: "4px" }}
+                  >
+                    <path d="M10.75 2.75a.75.75 0 0 0-1.5 0v8.614L6.295 8.235a.75.75 0 1 0-1.09 1.03l4.25 4.5a.75.75 0 0 0 1.09 0l4.25-4.5a.75.75 0 0 0-1.09-1.03l-2.955 3.129V2.75Z" />
+                    <path d="M3.5 12.75a.75.75 0 0 0-1.5 0v2.5A2.75 2.75 0 0 0 4.75 18h10.5A2.75 2.75 0 0 0 18 15.25v-2.5a.75.75 0 0 0-1.5 0v2.5c0 .69-.56 1.25-1.25 1.25H4.75c-.69 0-1.25-.56-1.25-1.25v-2.5Z" />
+                  </svg>
+                  <span className="button-text-mobile">Export</span>
+                  <span className="button-text-desktop">Export Novel</span>
+                </button>
+                <button
+                  onClick={() => onShowTemplateEditor(novel.id)}
+                  title="Edit Prompt Template"
+                >
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    viewBox="0 0 20 20"
+                    fill="currentColor"
+                    width="16"
+                    height="16"
+                    style={{ verticalAlign: "middle", marginRight: "4px" }}
+                  >
+                    <path d="M17.435 2.565a.75.75 0 0 0-1.06 0l-11.5 11.5a.75.75 0 0 0 0 1.06l3 3a.75.75 0 0 0 1.06 0l11.5-11.5a.75.75 0 0 0 0-1.06l-3-3ZM16.06 4.344l1.656 1.656L6.343 17.373l-1.656-1.656L16.061 4.344ZM4.939 16.061 3.283 14.404 14.404 3.283l1.656 1.656L4.94 16.06Z" />
+                    <path d="M1.5 17.75a.75.75 0 0 0 0 1.5h14.5a.75.75 0 0 0 0-1.5H1.5Z" />
+                  </svg>
+                  <span className="button-text-mobile">Template</span>
+                  <span className="button-text-desktop">Edit Template</span>
+                </button>
+                <button
+                  onClick={() => handleViewNovelText(novel.id)}
+                  title="View Novel Text"
+                >
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    viewBox="0 0 20 20"
+                    fill="currentColor"
+                    width="16"
+                    height="16"
+                    style={{ verticalAlign: "middle", marginRight: "4px" }}
+                  >
+                    <path d="M.99 6.002c0-.551.444-.998.995-.998h16.03c.55 0 .995.447.995.998v7.996a.998.998 0 0 1-.995.998H1.985a.998.998 0 0 1-.995-.998V6.002Zm1.99.998v6.001h14.03V7.000H2.98Z" />
+                    <path d="M4 4.002c0-.551.444-.998.995-.998h10.01a.998.998 0 0 1 .995.998v.998a.75.75 0 0 1-1.5 0v-.998H5.495v.998a.75.75 0 0 1-1.5 0V4.002Z" />
+                  </svg>
+                  <span className="button-text-mobile">View</span>
+                  <span className="button-text-desktop">View Text</span>
+                </button>
+                {/* Feedback can be here or moved elsewhere if needed */}
+                <div
+                  className="feedback-container"
+                  style={{ display: "inline-block", marginLeft: "10px" }}
+                >
+                  <FeedbackMessage
+                    show={exportFeedback}
+                    message="Export Started!"
+                  />
+                </div>
+              </div>
+
+              {/* Chapter Filter Group */}
+              <div className="chapter-filter-group">
+                <label htmlFor="chapterFilter">Show:</label>
+                <select
+                  id="chapterFilter"
+                  value={chapterFilter}
+                  onChange={(e) => setChapterFilter(e.target.value)}
+                  title="Filter Chapters"
+                >
+                  <option value="all">All Chapters</option>
+                  {novel.chapters.map((ch, index) => (
+                    <option key={ch.id} value={ch.id}>
+                      {ch.title || `Chapter ${index + 1}`}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Delete Button (Pushed Right) */}
+              <button
+                className="delete-btn delete-novel-btn"
+                onClick={() => onDeleteNovel(novel.id)}
+                title="Delete This Novel"
+              >
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  viewBox="0 0 20 20"
+                  fill="currentColor"
+                  width="16"
+                  height="16"
+                  style={{ verticalAlign: "middle", marginRight: "4px" }}
+                >
+                  <path
+                    fillRule="evenodd"
+                    d="M8.75 1A2.75 2.75 0 0 0 6 3.75v.443c-.795.077-1.58.22-2.326.418C2.675 4.83 2 5.777 2 6.75V17.25A2.75 2.75 0 0 0 4.75 20h10.5A2.75 2.75 0 0 0 18 17.25V6.75c0-.973-.675-1.92-1.674-2.14C15.58 4.413 14.795 4.27 14 4.193v-.443A2.75 2.75 0 0 0 11.25 1h-2.5ZM7.5 3.75c0-.69.56-1.25 1.25-1.25h2.5c.69 0 1.25.56 1.25 1.25v.443c-.795.077-1.58.22-2.326.418C10.42 4.83 10 5.27 10 5.75v.5h-1v-.5c0-.48-.42-.92-.924-1.14-.746-.198-1.531-.341-2.326-.418V3.75ZM8.5 7.5V15h-1V7.5h1Zm3 0V15h-1V7.5h1Z"
+                    clipRule="evenodd"
+                  />
+                </svg>
+                <span className="button-text-mobile">Delete</span>
+                <span className="button-text-desktop">Delete Novel</span>
+              </button>
+            </div>
+            {/* === End Header Container === */}
+            {/* Remove the old separate filter/export divs if they only contained the above */}
+            {/* <div className="import-export-area"> ... MOVED ... </div> */}
+            {/* <div className="chapter-filter"> ... MOVED ... </div> */}
+            <hr /> {/* Keep the separator */}
             <div id="chaptersContainer">
+              {/* ... rest of the chapter mapping logic ... */}
               {filteredChapters.length === 0 &&
                 chapterFilter !== "all" &&
                 novel.chapters.length > 0 && (
@@ -1200,8 +1423,7 @@ STOP EARLY if the continuation contains what was required in the instructions. Y
                         onDeleteChapter={onDeleteChapter}
                         onMoveChapter={onMoveChapter}
                         onAddBeat={onAddBeat}
-                        // onUpdateBeatText removed
-                        onUpdateGeneratedText={onUpdateGeneratedText} // Pass down for clear button
+                        onUpdateGeneratedText={onUpdateGeneratedText}
                         onDeleteBeat={onDeleteBeat}
                         onMoveBeat={onMoveBeat}
                         onShowPrompt={onShowPrompt}
@@ -1218,7 +1440,7 @@ STOP EARLY if the continuation contains what was required in the instructions. Y
                         onEditBeat={onEditBeat}
                         onShowEditGeneratedTextModal={
                           onShowEditGeneratedTextModal
-                        } // **** PASS DOWN ****
+                        }
                       />
                     );
                   })
@@ -1226,14 +1448,12 @@ STOP EARLY if the continuation contains what was required in the instructions. Y
                     <p>No chapters yet. Click "+ Add New Chapter" below.</p>
                   )}
             </div>
-
             <button onClick={() => onAddChapter(novel.id)}>
               + Add New Chapter
             </button>
           </div>
         );
       }
-
       // --- NovelListView Component ---
       function NovelListView({
         novels,
