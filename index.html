@@ -5,379 +5,697 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>React AI-Assisted Novel Editor</title>
     <style>
-      body {
-        font-family: sans-serif;
-        line-height: 1.6;
-        margin: 20px;
-        background-color: #f4f4f4;
-        color: #333;
+      /* --- Base & Variables --- */
+      :root {
+        --primary-color: #4f46e5; /* Indigo */
+        --primary-color-hover: #4338ca;
+        --danger-color: #dc2626; /* Red */
+        --danger-color-hover: #b91c1c;
+        --warning-color: #f59e0b; /* Amber */
+        --warning-color-hover: #d97706;
+        --secondary-color: #6b7280; /* Gray */
+        --secondary-color-hover: #4b5563;
+        --light-bg: #f9fafb; /* Very light gray */
+        --medium-bg: #f3f4f6; /* Light gray */
+        --container-bg: #ffffff;
+        --text-color: #1f2937; /* Darker gray */
+        --text-color-light: #6b7280; /* Medium gray */
+        --border-color: #e5e7eb; /* Lighter gray border */
+        --border-radius: 6px;
+        --box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1),
+          0 1px 2px -1px rgba(0, 0, 0, 0.1);
+        --box-shadow-lg: 0 4px 6px -1px rgba(0, 0, 0, 0.1),
+          0 2px 4px -2px rgba(0, 0, 0, 0.1);
       }
 
+      body {
+        font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI",
+          Roboto, Oxygen, Ubuntu, Cantarell, "Open Sans", "Helvetica Neue",
+          sans-serif;
+        line-height: 1.6;
+        margin: 0; /* Remove default margin */
+        padding: 30px; /* Add padding around the body */
+        background-color: var(--medium-bg);
+        color: var(--text-color);
+        -webkit-font-smoothing: antialiased;
+        -moz-osx-font-smoothing: grayscale;
+      }
+
+      /* --- Typography --- */
       h1,
       h2,
+      h3,
+      h4 {
+        color: var(--text-color);
+        margin-top: 0;
+        margin-bottom: 0.75em;
+        line-height: 1.3;
+      }
+      h1 {
+        font-size: 2em;
+        font-weight: 600;
+        margin-bottom: 1em;
+      }
+      h2 {
+        font-size: 1.5em;
+        font-weight: 600;
+      }
       h3 {
-        color: #333;
+        font-size: 1.25em;
+        font-weight: 600;
+      }
+      h4 {
+        font-size: 1.1em;
+        font-weight: 600;
+      }
+      p {
+        margin-bottom: 1em;
       }
 
+      /* --- Layout --- */
+      .container {
+        max-width: 1200px;
+        margin: 0 auto; /* Center container */
+        background: var(--container-bg);
+        padding: 30px; /* More padding */
+        box-shadow: var(--box-shadow-lg);
+        border-radius: var(--border-radius);
+      }
+
+      .view {
+        margin-top: 25px;
+      }
+
+      hr {
+        border: none;
+        border-top: 1px solid var(--border-color);
+        margin: 30px 0; /* More spacing */
+      }
+
+      /* --- Buttons --- */
       button {
-        padding: 8px 12px;
-        margin: 5px 2px;
+        padding: 9px 15px;
+        margin: 5px 4px;
         cursor: pointer;
-        background-color: #5c67f2;
+        background-color: var(--primary-color);
         color: white;
         border: none;
-        border-radius: 4px;
+        border-radius: var(--border-radius);
+        font-size: 0.9rem;
+        font-weight: 500;
+        transition: background-color 0.2s ease-in-out,
+          box-shadow 0.2s ease-in-out;
+        box-shadow: var(--box-shadow);
       }
 
       button:hover {
-        background-color: #4a54e1;
+        background-color: var(--primary-color-hover);
+        box-shadow: 0 2px 5px 0 rgba(0, 0, 0, 0.15);
+      }
+
+      button:focus {
+        outline: 2px solid transparent;
+        outline-offset: 2px;
+        box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.4); /* Primary color focus ring */
+      }
+      button:focus:not(:focus-visible) {
+        /* Remove focus ring if not keyboard focused */
+        box-shadow: none;
       }
 
       button.delete-btn {
-        background-color: #e74c3c;
+        background-color: var(--danger-color);
       }
       button.delete-btn:hover {
-        background-color: #c0392b;
+        background-color: var(--danger-color-hover);
+      }
+      button.delete-btn:focus {
+        box-shadow: 0 0 0 3px rgba(220, 38, 38, 0.4); /* Danger color focus ring */
       }
 
       button.move-btn {
-        background-color: #f39c12;
+        background-color: var(--warning-color);
         font-weight: bold;
-        padding: 4px 8px;
-        min-width: 30px;
+        padding: 5px 10px;
+        min-width: 35px;
+        font-size: 1rem; /* Make arrows slightly larger */
       }
       button.move-btn:hover {
-        background-color: #e67e22;
+        background-color: var(--warning-color-hover);
       }
+      button.move-btn:focus {
+        box-shadow: 0 0 0 3px rgba(245, 158, 11, 0.4); /* Warning color focus ring */
+      }
+
       button:disabled {
         background-color: #ccc;
         cursor: not-allowed;
+        box-shadow: none;
+        opacity: 0.7;
       }
 
       button.secondary-btn {
-        background-color: #7f8c8d;
+        background-color: var(--secondary-color);
+        color: white;
       }
       button.secondary-btn:hover {
-        background-color: #6c7a7b;
+        background-color: var(--secondary-color-hover);
+      }
+      button.secondary-btn:focus {
+        box-shadow: 0 0 0 3px rgba(107, 114, 128, 0.4); /* Secondary color focus ring */
       }
 
-      .container {
-        max-width: 1200px; /* Increased from 900px */
-        margin: auto;
-        background: white;
-        padding: 20px;
-        box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
-        border-radius: 8px;
+      /* --- Input Fields & Textareas --- */
+      input[type="text"],
+      textarea {
+        padding: 10px 12px;
+        border: 1px solid var(--border-color);
+        border-radius: var(--border-radius);
+        font-size: 0.95rem;
+        width: 100%;
+        box-sizing: border-box;
+        transition: border-color 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
       }
 
-      /* Views */
-      .view {
-        margin-top: 20px;
+      input[type="text"]:focus,
+      textarea:focus {
+        border-color: var(--primary-color);
+        outline: 2px solid transparent;
+        outline-offset: 2px;
+        box-shadow: 0 0 0 2px rgba(79, 70, 229, 0.3); /* Primary color focus glow */
       }
 
+      textarea {
+        min-height: 60px;
+        line-height: 1.5;
+        resize: vertical;
+      }
+
+      /* --- Novel List View --- */
       #novelList {
         list-style: none;
         padding: 0;
+        margin: 20px 0;
       }
 
       #novelList li {
         display: flex;
         justify-content: space-between;
         align-items: center;
-        padding: 10px;
-        border-bottom: 1px solid #eee;
+        padding: 15px 20px; /* More padding */
+        border: 1px solid var(--border-color);
+        border-radius: var(--border-radius);
+        margin-bottom: 10px;
+        background-color: var(--container-bg);
+        transition: box-shadow 0.2s ease-in-out, border-color 0.2s ease-in-out;
       }
-      #novelList li:last-child {
-        border-bottom: none;
+      #novelList li:hover {
+        border-color: #c7d2fe; /* Lighter primary on hover */
+        box-shadow: var(--box-shadow);
       }
 
       .novel-item-title {
-        font-weight: bold;
+        font-weight: 600; /* Bolder title */
         cursor: pointer;
+        color: var(--primary-color);
+        font-size: 1.1em;
+        flex-grow: 1;
+        margin-right: 15px;
       }
       .novel-item-title:hover {
-        color: #5c67f2;
+        text-decoration: underline;
+        color: var(--primary-color-hover);
       }
 
+      #novelList li div button {
+        /* Reduce margin for buttons in list */
+        margin: 0 0 0 8px;
+      }
+
+      /* Create/Import Novel Area */
+      .create-import-area {
+        display: flex;
+        align-items: center;
+        gap: 10px; /* Space between items */
+        margin-top: 20px;
+        padding: 15px;
+        background-color: var(--light-bg);
+        border-radius: var(--border-radius);
+      }
+      .create-import-area input[type="text"] {
+        flex-grow: 1; /* Take available space */
+      }
+
+      /* --- Novel Editor View --- */
+      .novel-title-edit input[type="text"] {
+        font-size: 1.8em; /* Larger title */
+        font-weight: 600;
+        margin-bottom: 15px;
+        padding: 12px 15px;
+        border: none; /* No border unless focused */
+        border-bottom: 2px solid transparent; /* Space for focus */
+        border-radius: 0;
+        width: 100%;
+        box-shadow: none;
+      }
+      .novel-title-edit input[type="text"]:focus {
+        border-bottom-color: var(--primary-color);
+        box-shadow: none; /* Override general focus */
+        background-color: var(--light-bg);
+      }
+
+      .import-export-area {
+        margin: 15px 0 25px 0;
+        padding: 15px;
+        background: var(--light-bg);
+        border-radius: var(--border-radius);
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+        align-items: center;
+      }
+
+      .import-area {
+        margin-top: 15px;
+        padding: 15px;
+        background-color: var(--medium-bg);
+        border: 1px dashed var(--border-color);
+        border-radius: var(--border-radius);
+      }
+
+      .import-area textarea {
+        width: 100%;
+        min-height: 150px;
+        margin: 10px 0;
+        box-sizing: border-box;
+      }
+
+      .chapter-filter {
+        margin: 15px 0 25px 0;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+      }
+      .chapter-filter label {
+        font-weight: 500;
+        color: var(--text-color-light);
+      }
+      .chapter-filter select {
+        padding: 8px 12px;
+        border: 1px solid var(--border-color);
+        border-radius: var(--border-radius);
+        background-color: white;
+        min-width: 200px;
+      }
+
+      /* --- Chapter --- */
       .chapter {
-        /* Removed border, padding, background, and border-radius */
-        margin-bottom: 30px; /* Increased from 20px for better visual separation */
+        margin-bottom: 40px; /* More space between chapters */
+        padding: 25px;
+        border: 1px solid var(--border-color);
+        border-radius: var(--border-radius);
+        background-color: var(
+          --container-bg
+        ); /* White background for chapters */
+        box-shadow: var(--box-shadow);
       }
 
       .chapter-header {
         display: flex;
         justify-content: space-between;
         align-items: center;
-        margin-bottom: 15px; /* Increased from 10px */
-        flex-wrap: wrap; /* Allow wrapping on smaller screens */
-        border-bottom: 1px solid #eee; /* Added border-bottom for visual separation */
-        padding-bottom: 10px; /* Added padding for visual separation */
+        margin-bottom: 20px;
+        flex-wrap: wrap;
+        gap: 15px; /* Space between title and controls */
+        padding-bottom: 15px;
+        border-bottom: 1px solid var(--border-color);
       }
 
       .chapter-title {
-        font-size: 1.2em;
-        font-weight: bold;
+        font-size: 1.3em; /* Slightly larger */
+        font-weight: 600;
         border: none;
-        padding: 5px;
-        flex-grow: 1; /* Allow title to take available space */
-        margin-right: 10px; /* Space between title and buttons */
-        border: 1px solid transparent; /* Add border for focus state consistency */
+        padding: 8px 0; /* Padding only vertical */
+        flex-grow: 1;
+        margin-right: 10px;
+        background: transparent;
+        border-radius: 0;
+        box-shadow: none;
+        border-bottom: 2px solid transparent; /* For focus state */
+        width: auto; /* Don't force full width */
       }
       .chapter-title:focus {
-        outline: 1px solid #5c67f2;
-        background-color: #f0f0ff;
-        border: 1px solid #ccc;
+        outline: none;
+        background-color: #f0f0ff; /* Light primary bg */
+        border-bottom: 2px solid var(--primary-color);
+        box-shadow: none;
       }
 
+      .chapter-controls {
+        display: flex;
+        align-items: center;
+        flex-shrink: 0; /* Prevent controls from shrinking too much */
+        gap: 8px; /* Space between control buttons */
+      }
       .chapter-controls button,
       .beat-controls button {
-        margin-left: 5px;
+        margin: 0; /* Remove default button margin */
       }
 
+      /* --- Scene Beat --- */
       .scene-beat {
-        border-top: 1px dashed #ddd;
-        border-bottom: 1px dashed #ddd;
-        border-left: none;
-        border-right: none;
-        padding: 10px 0; /* Remove horizontal padding, keep vertical */
-        margin-top: 15px; /* Increased from 10px for better spacing */
-        background-color: transparent; /* Removed background */
-        border-radius: 0; /* Remove border radius */
+        /* Remove old borders */
+        border: none;
+        padding: 20px;
+        margin: 20px 0; /* Space between beats */
+        background-color: var(
+          --light-bg
+        ); /* Light background to group beat content */
+        border-radius: var(--border-radius);
+        position: relative; /* For potential future decorations */
       }
 
-      /* Display beat text as static paragraph */
+      /* Style the instruction label */
+      .scene-beat > p:first-of-type {
+        margin-bottom: 8px;
+        font-size: 0.9em;
+        color: var(--text-color-light);
+        font-weight: 500;
+      }
+
+      /* Instruction Text Area (Display) */
       .beat-text-area {
-        padding: 8px;
-        background-color: #f5f5f5;
-        border-radius: 4px;
+        padding: 12px;
+        background-color: #e0e7ff; /* Slightly different light blue for instructions */
+        border: 1px solid #c7d2fe;
+        border-radius: var(--border-radius);
         min-height: 60px;
         white-space: pre-wrap;
-        width: 100%; /* Make full width */
-        box-sizing: border-box; /* Include padding in width calculation */
-        min-height: 40px;
-      }
-
-      .generated-text-area-display {
-        /* Renamed for clarity */
-        padding: 8px;
-        background-color: #e8f0fe; /* Light blue background */
-        border-radius: 4px;
-        min-height: 80px;
-        white-space: pre-wrap; /* Preserve whitespace */
-        border: 1px solid #d0d8e8; /* Add subtle border */
-      }
-
-      .summary-text-area {
-        min-height: 80px;
-        background-color: #e8f0fe; /* Light blue background */
+        width: 100%;
+        box-sizing: border-box;
+        color: var(--text-color);
+        line-height: 1.5;
+        margin-bottom: 15px; /* Space before controls */
       }
 
       .beat-controls {
         display: flex;
         justify-content: flex-end;
         align-items: center;
-        margin-top: 5px;
+        margin-top: 10px;
+        margin-bottom: 20px; /* Space before generated text */
         flex-wrap: wrap;
+        gap: 8px; /* Space between beat control buttons */
       }
 
+      /* Style the generated content label */
+      .scene-beat > p:nth-of-type(2) {
+        /* Assuming label is 2nd p */
+        margin-top: 20px; /* Space above label */
+        margin-bottom: 8px;
+        font-size: 0.9em;
+        color: var(--text-color-light);
+        font-weight: 500;
+      }
+
+      /* Generated Text Display */
+      .generated-text-area-display {
+        padding: 15px;
+        background-color: #ffffff; /* White background like main container */
+        border: 1px solid var(--border-color);
+        border-radius: var(--border-radius);
+        min-height: 80px;
+        white-space: pre-wrap;
+        color: var(--text-color);
+        line-height: 1.6;
+        font-size: 1rem; /* Slightly larger for readability */
+        margin-bottom: 10px; /* Space before edit button */
+      }
+
+      /* Generated text edit button alignment */
+      .generated-text-edit-controls {
+        text-align: right;
+        margin-top: 5px;
+      }
+
+      /* --- Add Beat Area --- */
       .add-beat-area {
-        margin-top: 15px;
+        margin-top: 25px;
+        padding: 20px;
+        background-color: var(--medium-bg);
+        border-radius: var(--border-radius);
         display: flex;
-        align-items: center;
+        align-items: flex-start; /* Align top */
+        gap: 10px;
       }
 
       .add-beat-area textarea {
         flex-grow: 1;
         margin-right: 10px;
-        min-height: 30px;
+        min-height: 50px; /* Slightly taller */
+      }
+      .add-beat-area button {
+        flex-shrink: 0; /* Prevent button from shrinking */
       }
 
-      .feedback {
-        color: green;
-        font-size: 0.9em;
-        margin-left: 10px;
-        display: inline-block;
-        opacity: 0;
-        transition: opacity 0.5s ease-out;
-      }
-      .feedback.show {
-        opacity: 1;
-      }
-
-      input[type="text"] {
-        padding: 8px;
-        border: 1px solid #ccc;
-        border-radius: 4px;
-        margin-right: 5px; /* Add some spacing */
-      }
-
-      .novel-title-edit input[type="text"] {
-        font-size: 1.5em;
-        margin-bottom: 10px;
-        width: calc(100% - 20px); /* Adjust width */
-      }
-
-      .import-export-area {
-        margin: 10px 0;
-        padding: 10px;
-        background: #f8f8f8;
-        border-radius: 4px;
-      }
-
-      .import-area {
-        /* Display handled by React state */
-        margin-top: 10px;
-      }
-
-      .import-area textarea {
-        width: 100%;
-        min-height: 200px;
-        margin: 10px 0;
-        box-sizing: border-box;
-      }
-
-      /* --- Settings Styles (No separate view now) --- */
-      .template-help {
-        font-size: 0.9em;
-        color: #555;
-        margin-bottom: 10px;
-      }
-      .template-help code {
-        background-color: #eee;
-        padding: 2px 4px;
-        border-radius: 3px;
-      }
-
-      /* --- Modal Dialog Styles --- */
-      .modal-overlay {
-        /* Display handled by React state */
-        position: fixed;
-        top: 0;
-        left: 0;
-        width: 100%;
-        height: 100%;
-        background-color: rgba(0, 0, 0, 0.5);
-        z-index: 1000;
-        display: flex; /* Use flex for centering */
-        justify-content: center;
-        align-items: center;
-      }
-
-      .modal-dialog {
-        background-color: white;
-        max-width: 80%;
-        width: 800px;
-        max-height: 80vh;
-        border-radius: 8px;
-        box-shadow: 0 0 20px rgba(0, 0, 0, 0.3);
-        display: flex;
-        flex-direction: column;
-      }
-
-      .modal-header {
-        padding: 15px;
-        border-bottom: 1px solid #eee;
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-      }
-
-      .modal-title {
-        font-size: 1.2em;
-        font-weight: bold;
-        margin: 0;
-      }
-
-      .modal-close {
-        background: none;
-        border: none;
-        font-size: 1.5em;
-        cursor: pointer;
-        color: #777;
-        padding: 0;
-        margin: 0;
-        line-height: 1; /* Ensure tight fit */
-      }
-
-      .modal-body {
-        padding: 15px;
-        overflow-y: auto;
-        flex-grow: 1;
-      }
-
-      .modal-footer {
-        padding: 15px;
-        border-top: 1px solid #eee;
-        display: flex;
-        justify-content: flex-end;
-      }
-
-      .modal-footer button {
-        margin-left: 10px;
-      }
-
-      .prompt-textarea {
-        /* Used by multiple modals now */
-        width: 100%;
-        min-height: 300px;
-        font-family: monospace;
-        padding: 10px;
-        border: 1px solid #ddd;
-        border-radius: 4px;
-        margin-bottom: 10px;
-        resize: vertical;
-        box-sizing: border-box;
-      }
-
-      /* --- Collapsible summary styles --- */
+      /* --- Chapter Summary --- */
       .summary-section {
-        transition: max-height 0.3s ease-out;
+        transition: max-height 0.3s ease-out, opacity 0.3s ease-out,
+          margin-top 0.3s ease-out;
         overflow: hidden;
-        max-height: 500px; /* Default expanded height large enough */
+        max-height: 1000px; /* Large enough for content */
+        opacity: 1;
+        margin-top: 15px;
       }
 
       .summary-section.collapsed {
         max-height: 0;
+        opacity: 0;
+        margin-top: 0;
+        /* Hide elements inside instantly to prevent interaction */
+        pointer-events: none;
+      }
+      .summary-section.collapsed > * {
+        visibility: hidden;
       }
 
       .summary-header {
         display: flex;
         align-items: center;
         cursor: pointer;
-        gap: 5px;
-        margin-bottom: 10px; /* Add space below header */
+        gap: 8px;
+        padding: 10px 0;
+        border-top: 1px solid var(--border-color);
+        margin-top: 30px; /* Separate from beats */
+        user-select: none; /* Prevent text selection on click */
+      }
+      .summary-header:hover h4 {
+        color: var(--primary-color);
       }
 
       .summary-header h4 {
         margin: 0;
+        color: var(--text-color-light);
+        transition: color 0.2s ease-in-out;
+        font-weight: 600;
       }
 
       .collapse-indicator {
-        font-size: 18px;
+        font-size: 16px;
         line-height: 1;
         transition: transform 0.3s;
         display: inline-block;
+        color: var(--text-color-light);
       }
-
+      .summary-header:not(.collapsed) .collapse-indicator {
+        transform: rotate(0deg);
+      }
       .summary-header.collapsed .collapse-indicator {
         transform: rotate(-90deg);
       }
 
-      /* Chapter Filter */
-      .chapter-filter {
-        margin: 10px 0;
+      .summary-controls {
+        /* Container for summary button + feedback */
+        margin-bottom: 10px;
+      }
+      .summary-text-area {
+        min-height: 120px; /* Taller summary area */
+        background-color: var(--container-bg);
       }
 
-      /* Add Beat Textarea Focus Style */
-      .add-beat-area textarea:focus {
-        outline: 1px solid #5c67f2;
-      }
-
-      /* Prevent layout shift from feedback */
+      /* --- Feedback --- */
       .feedback-container {
         display: inline-block;
-        min-width: 60px; /* Adjust as needed */
+        min-width: 70px; /* Prevent layout shift */
         text-align: left;
+        margin-left: 10px;
+        vertical-align: middle;
+      }
+      .feedback {
+        color: #16a34a; /* Green */
+        font-size: 0.9em;
+        font-weight: 500;
+        opacity: 0;
+        transition: opacity 0.3s ease-out;
+      }
+      .feedback.show {
+        opacity: 1;
+      }
+
+      /* --- Modal Dialog Styles --- */
+      .modal-overlay {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background-color: rgba(0, 0, 0, 0.6); /* Darker overlay */
+        z-index: 1000;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        padding: 20px; /* Padding for smaller screens */
+        box-sizing: border-box;
+        opacity: 0; /* Start hidden for animation */
+        animation: fadeIn 0.2s ease-out forwards;
+      }
+      @keyframes fadeIn {
+        to {
+          opacity: 1;
+        }
+      }
+
+      .modal-dialog {
+        background-color: var(--container-bg);
+        max-width: 90%;
+        width: 800px;
+        max-height: 85vh; /* Allow slightly more height */
+        border-radius: var(--border-radius);
+        box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1),
+          0 4px 6px -4px rgba(0, 0, 0, 0.1);
+        display: flex;
+        flex-direction: column;
+        transform: scale(0.95); /* Start slightly small for animation */
+        opacity: 0;
+        animation: zoomIn 0.2s 0.1s ease-out forwards;
+      }
+      @keyframes zoomIn {
+        to {
+          transform: scale(1);
+          opacity: 1;
+        }
+      }
+
+      .modal-header {
+        padding: 15px 20px;
+        border-bottom: 1px solid var(--border-color);
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        flex-shrink: 0;
+      }
+
+      .modal-title {
+        font-size: 1.2em;
+        font-weight: 600;
+        margin: 0;
+      }
+
+      .modal-close {
+        background: none;
+        border: none;
+        font-size: 1.8em; /* Larger close button */
+        cursor: pointer;
+        color: var(--text-color-light);
+        padding: 0 5px; /* Easier to click */
+        margin: -5px -5px -5px 0; /* Adjust position slightly */
+        line-height: 1;
+        transition: color 0.2s ease-in-out;
+      }
+      .modal-close:hover {
+        color: var(--text-color);
+      }
+
+      .modal-body {
+        padding: 20px;
+        overflow-y: auto;
+        flex-grow: 1;
+      }
+
+      .modal-footer {
+        padding: 15px 20px;
+        border-top: 1px solid var(--border-color);
+        display: flex;
+        justify-content: flex-end;
+        background-color: var(--light-bg); /* Subtle footer background */
+        border-bottom-left-radius: var(--border-radius);
+        border-bottom-right-radius: var(--border-radius);
+        flex-shrink: 0;
+        gap: 10px; /* Space between footer buttons */
+      }
+
+      .modal-footer button {
+        margin: 0; /* Remove default margin */
+      }
+
+      .prompt-textarea {
+        width: 100%;
+        min-height: 350px; /* Taller text area */
+        font-family: "Menlo", "Monaco", "Consolas", monospace; /* Monospace for prompts */
+        font-size: 0.9rem;
+        padding: 15px;
+        border: 1px solid var(--border-color);
+        border-radius: var(--border-radius);
+        margin-bottom: 10px;
+        resize: vertical;
+        box-sizing: border-box;
+        background-color: var(--light-bg); /* Light bg for readonly textareas */
+      }
+      .prompt-textarea:not([readOnly]) {
+        background-color: var(--container-bg); /* White if editable */
+      }
+
+      /* --- Settings Styles (Template Help) --- */
+      .template-help {
+        font-size: 0.9em;
+        color: var(--text-color-light);
+        margin-top: 15px;
+        padding: 10px;
+        background-color: var(--medium-bg);
+        border-radius: var(--border-radius);
+      }
+      .template-help p {
+        margin-bottom: 5px;
+      }
+      .template-help ul {
+        margin: 5px 0 0 20px;
+        padding: 0;
+      }
+      .template-help code {
+        background-color: #e5e7eb;
+        padding: 2px 5px;
+        border-radius: 4px;
+        font-family: "Menlo", "Monaco", "Consolas", monospace;
+        color: var(--primary-color);
+      }
+
+      /* Novel Text Modal Specifics */
+      .novel-text-display {
+        white-space: pre-wrap;
+        font-family: "Georgia", "Times New Roman", Times, serif; /* Serif for novel text */
+        line-height: 1.7;
+        padding: 20px;
+        background-color: #fff;
+        border: 1px solid var(--border-color);
+        border-radius: var(--border-radius);
+        font-size: 1rem;
+        color: #333; /* Slightly lighter black for reading */
+      }
+      .novel-text-modal-body {
+        /* Add wrapper for max height */
+        max-height: 65vh;
+        overflow-y: auto;
+        padding: 5px; /* Padding around the scrollable area */
       }
     </style>
   </head>
